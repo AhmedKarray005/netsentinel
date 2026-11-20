@@ -1,0 +1,31 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Packet captures can contain private data (IPs, hostnames, DNS queries, payloads).
+# They stay out of Git unless placed in tests/fixtures/ (small, synthetic, reviewed).
+*.pcap
+*.pcapng
+*.cap
+!tests/fixtures/**/*.pcap
+
+# Local data and secrets
+*.db
+*.sqlite
+.env
+
+# Frontend (Phase 6)
+node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

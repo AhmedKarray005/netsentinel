@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netsentinel"
+version = "0.0.1"
+description = "Network traffic analysis and rule-based intrusion detection platform"
+readme = "README.md"
+requires-python = ">=3.12"
+# Runtime dependencies are added phase by phase (scapy in Phase 2, fastapi in Phase 5).
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+netsentinel = "netsentinel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F = pycodestyle + pyflakes, I = import order, B = bugbear, UP = modern syntax
+select = ["E", "F", "I", "B", "UP"]

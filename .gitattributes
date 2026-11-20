@@ -1,0 +1,6 @@
+# Normalise text line endings; treat captures as binary.
+* text=auto eol=lf
+*.pcap binary
+*.pcapng binary
+*.png binary
+*.ps1 text eol=crlf

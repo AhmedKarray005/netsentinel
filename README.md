@@ -2,7 +2,7 @@
 
 **Network Traffic Analysis & Intrusion Detection Platform** (personal portfolio project)
 
-> Status: **Phase 0 (setup)**. Nothing below "Planned capabilities" is implemented yet.
+> Status: **Phase 3 done** (offline PCAP analysis + flows). Detection rules come next.
 > This README is updated only with features that exist and are tested.
 
 ## Problem
@@ -19,8 +19,8 @@ Detection rules produce **suspicious indicators, not proof of malicious activity
 
 | Capability | Phase | Status |
 |---|---|---|
-| PCAP parsing: protocols, IPs, ports, sizes, DNS | 2 | planned |
-| Flow aggregation and traffic rates | 3 | planned |
+| PCAP parsing: protocols, IPs, ports, sizes, DNS | 2 | done, tested |
+| Flow aggregation, TCP states, traffic rates ([how](docs/flows.md)) | 3 | done, tested |
 | Rule engine: port scan, traffic spike, failed-connection pattern | 4 | planned |
 | SQLite storage + FastAPI REST API | 5 | planned |
 | React + TypeScript dashboard | 6 | planned |
@@ -41,6 +41,7 @@ python -m pip install -e ".[dev]"
 pytest
 ruff check .
 netsentinel --version
+netsentinel analyze path\to\capture.pcapng --top 10 --json report.json
 ```
 
 Conventions and lab safety rules: [docs/conventions.md](docs/conventions.md).

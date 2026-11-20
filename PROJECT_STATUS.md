@@ -26,7 +26,21 @@ Done (uncommitted):
 - Tests: synthetic 8-packet capture built in `tests/conftest.py`; parsing, summary and CLI tests.
 Real-capture check: `ping_gateway.pcapng` = 28 867 packets (matches Wireshark), 8 ICMP, 6 ARP,
 analyzed in ~5.8 s (~5 000 packets/s, Scapy is the bottleneck).
-Remaining: docs for the analyzer output in README; then Phase 3 (flows).
+Committed by Ahmed as `4e470a9`.
+
+## Phase 3 — Traffic flows (done 2026-11-20, uncommitted)
+- `flows/models.py` `Flow` (client/server, fwd/bwd packets+bytes, TCP state ESTABLISHED / CLOSED /
+  REJECTED / NO_REPLY / HALF_OPEN / MIDSTREAM); `flows/aggregator.py` `FlowAggregator`
+  (bidirectional key, idle timeouts 60 s UDP/ICMP + 300 s TCP, new flow on SYN after close);
+  `flows/stats.py` (flow report, top conversations, top talkers).
+- `summary.py`: timeline (packets/bytes per bucket, peak). `analysis.py` `analyze_file`: one pass,
+  summary + flows (to be reused by the API). CLI: `--idle-timeout`, `--tcp-idle-timeout`, `--bucket`;
+  JSON is now `{"summary": ..., "flows": ...}`.
+- Rules and limits documented in `docs/flows.md`.
+- Real captures: `refused_port.pcapng` -> 1 TCP flow REJECTED (port 9999). `web_dns_tracert.pcapng`
+  58 437 packets -> 1 063 flows (783 CLOSED, 49 MIDSTREAM, 45 ESTABLISHED, 17 HALF_OPEN, 1 NO_REPLY),
+  ~10 s. TCP timeout 60 s -> 300 s removed 42 keep-alive splits. Most of the laptop's traffic is IPv6.
+Next: Phase 4, detection engine (port scan, traffic spike, failed-connection pattern).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -82,3 +96,5 @@ from config.
 | 2026-11-20 | `pytest -q` (Phase 2) | 18 passed |
 | 2026-11-20 | `netsentinel analyze lab/01_ping/ping_gateway.pcapng` | 28 867 packets, ~5.8 s |
 | 2026-11-20 | `netsentinel analyze README.md` | clean error, exit code 2 |
+| 2026-11-20 | `pytest -q` (Phase 3) | 33 passed |
+| 2026-11-20 | `netsentinel analyze lab/02_web/web_dns_tracert.pcapng` | 1 063 flows, ~10 s |

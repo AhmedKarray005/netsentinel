@@ -24,8 +24,15 @@ class TrafficSummary:
     dst_ips: Counter = field(default_factory=Counter)
     dst_ports: Counter = field(default_factory=Counter)  # keys like "TCP/443", "UDP/53"
     dns_queries: Counter = field(default_factory=Counter)
+    # Traffic over time: packets and bytes per time bucket (bucket start, Unix seconds).
+    bucket_seconds: float = 1.0
+    timeline_packets: Counter = field(default_factory=Counter)
+    timeline_bytes: Counter = field(default_factory=Counter)
 
     def add(self, record: PacketRecord) -> None:
+        bucket = (record.timestamp // self.bucket_seconds) * self.bucket_seconds
+        self.timeline_packets[bucket] += 1
+        self.timeline_bytes[bucket] += record.length
         self.packet_count += 1
         self.total_bytes += record.length
         if self.min_length is None or record.length < self.min_length:
@@ -78,6 +85,22 @@ class TrafficSummary:
             "top_dst_ips": dict(self.dst_ips.most_common(top)),
             "top_dst_ports": dict(self.dst_ports.most_common(top)),
             "top_dns_queries": dict(self.dns_queries.most_common(top)),
+            "timeline": self._timeline(),
+        }
+
+    def _timeline(self) -> dict[str, Any]:
+        buckets = sorted(self.timeline_packets)
+        peak = max(buckets, key=lambda b: self.timeline_packets[b], default=None)
+        return {
+            "bucket_seconds": self.bucket_seconds,
+            "peak": None
+            if peak is None
+            else {"start": _iso(peak), "packets": self.timeline_packets[peak]},
+            # Only non-empty buckets are listed; missing buckets mean zero traffic.
+            "buckets": [
+                {"start": b, "packets": self.timeline_packets[b], "bytes": self.timeline_bytes[b]}
+                for b in buckets
+            ],
         }
 
 

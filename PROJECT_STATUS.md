@@ -2,7 +2,21 @@
 
 Last updated: 2026-11-20
 
-## Current phase: 0 — Planning and environment setup (in progress)
+## Current phase: 1 — Networking lab (almost done)
+
+Experiments run by Ahmed on 2026-11-20 (results reported by him; captures in `lab/`, git-ignored):
+- `lab/01_ping/ping_gateway.pcapng`: ping to home gateway 192.168.1.254 (/24 Wi-Fi). 4 request/reply
+  pairs, TTL 128 out (Windows) / 64 back (Linux box), 74-byte frames, first reply slow (~287 ms).
+- `lab/02_web/web_dns_tracert.pcapng`: DNS (UDP/53), HTTP to example.com (handshake + clear-text page),
+  HTTPS (TLS, SNI `example.com` visible), `tracert -d -h 6 1.1.1.1` (hops 2 and 5 silent, hop 6 Cloudflare).
+  Also used for MAC/ARP (Ethernet II, `arp -a`) and UDP-vs-TCP reading.
+- `lab/03_refused/refused_port.pcapng`: `curl 127.0.0.1:9999` on loopback -> SYN / RST,ACK (port scan basis).
+- `netstat -ano` LISTENING/ESTABLISHED + `tasklist` to map a connection to its program.
+
+Remaining in Phase 1: NAT explanation; optional short lab notes per experiment.
+Next: Phase 2, packet analyzer (Ahmed writes the code, Claude guides).
+
+## Phase 0 — Planning and environment setup (done 2026-11-20)
 
 ### Done
 - Brief reviewed; MVP and phase completion criteria agreed (see below).
@@ -15,9 +29,10 @@ Last updated: 2026-11-20
 ### Tests executed
 - See the latest entry in "Test log".
 
-### Remaining in Phase 0
-- Install Wireshark on Windows (Npcap already present).
-- First commit; create the GitHub repository (private until Phase 8).
+- Wireshark 4.6.10 installed; first commit `db1e937`.
+
+### Still open from Phase 0
+- Create the GitHub repository (private until Phase 8).
 - Free space on C: (1.9 GB free on 2026-11-20) or move Docker's disk image to D: before Phase 7.
 
 ## MVP (end of Phase 4)

@@ -13,8 +13,20 @@ Experiments run by Ahmed on 2026-11-20 (results reported by him; captures in `la
 - `lab/03_refused/refused_port.pcapng`: `curl 127.0.0.1:9999` on loopback -> SYN / RST,ACK (port scan basis).
 - `netstat -ano` LISTENING/ESTABLISHED + `tasklist` to map a connection to its program.
 
-Remaining in Phase 1: NAT explanation; optional short lab notes per experiment.
-Next: Phase 2, packet analyzer (Ahmed writes the code, Claude guides).
+Remaining in Phase 1: optional short lab notes per experiment (NAT explained 2026-11-20).
+
+## Phase 2 — Packet analyzer (in progress, started 2026-11-20)
+Done (uncommitted):
+- `parsing/models.py` `PacketRecord`; `parsing/pcap_reader.py` `read_pcap` (streaming, pcap+pcapng,
+  classification by the layer directly above IP so ICMP errors quoting TCP/UDP stay ICMP,
+  DNS question names, `PcapReadError` for missing/invalid files). Scapy 2.8.0.
+- `summary.py` `TrafficSummary` (counts, bytes, min/max/mean length, time range, rate, protocol mix,
+  top src/dst IPs, top dst ports as `PROTO/port`, top DNS queries) and `netsentinel analyze FILE
+  [--top N] [--json OUT]` (exit code 2 on bad input).
+- Tests: synthetic 8-packet capture built in `tests/conftest.py`; parsing, summary and CLI tests.
+Real-capture check: `ping_gateway.pcapng` = 28 867 packets (matches Wireshark), 8 ICMP, 6 ARP,
+analyzed in ~5.8 s (~5 000 packets/s, Scapy is the bottleneck).
+Remaining: docs for the analyzer output in README; then Phase 3 (flows).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -67,3 +79,6 @@ from config.
 |---|---|---|
 | 2026-11-20 | `pytest -q` | 3 passed |
 | 2026-11-20 | `ruff check .` / `ruff format --check .` | clean |
+| 2026-11-20 | `pytest -q` (Phase 2) | 18 passed |
+| 2026-11-20 | `netsentinel analyze lab/01_ping/ping_gateway.pcapng` | 28 867 packets, ~5.8 s |
+| 2026-11-20 | `netsentinel analyze README.md` | clean error, exit code 2 |

@@ -8,8 +8,8 @@ version = "0.0.1"
 description = "Network traffic analysis and rule-based intrusion detection platform"
 readme = "README.md"
 requires-python = ">=3.12"
-# Runtime dependencies are added phase by phase (scapy in Phase 2, fastapi in Phase 5).
-dependencies = []
+# Runtime dependencies are added phase by phase (fastapi arrives in Phase 5).
+dependencies = ["scapy>=2.6"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]

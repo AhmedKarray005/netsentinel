@@ -7,6 +7,7 @@ from pathlib import Path
 
 from netsentinel import __version__
 from netsentinel.analysis import analyze_file
+from netsentinel.detection import ConfigError, load_config
 from netsentinel.parsing import PcapReadError
 
 
@@ -35,7 +36,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--bucket", type=float, default=1.0,
         help="Timeline bucket size in seconds (default 1)",
     )  # fmt: skip
+    analyze.add_argument(
+        "--rules", type=Path, metavar="FILE",
+        help="TOML file overriding detection thresholds (see config/rules.example.toml)",
+    )  # fmt: skip
     analyze.add_argument("--json", type=Path, metavar="FILE", help="Also write the report as JSON")
+
+    make = commands.add_parser(
+        "make-scenarios", help="Write labelled synthetic PCAPs (no traffic is sent)."
+    )
+    make.add_argument("out_dir", type=Path)
+
+    evaluate_cmd = commands.add_parser(
+        "evaluate", help="Run detection on labelled scenarios and count TP/FP/FN."
+    )
+    evaluate_cmd.add_argument("scenario_dir", type=Path, help="Folder containing manifest.json")
+    evaluate_cmd.add_argument("--rules", type=Path, metavar="FILE")
     return parser
 
 
@@ -43,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "analyze":
         return _analyze(args)
+    if args.command == "make-scenarios":
+        from netsentinel.scenarios import write_scenarios
+
+        print(f"Scenarios written, ground truth in {write_scenarios(args.out_dir)}")
+        return 0
+    if args.command == "evaluate":
+        return _evaluate(args)
     print(f"netsentinel {__version__} - use 'netsentinel analyze <file>' (see --help).")
     return 0
 
@@ -55,16 +78,39 @@ def _analyze(args: argparse.Namespace) -> int:
             idle_timeout=args.idle_timeout,
             tcp_idle_timeout=args.tcp_idle_timeout,
             bucket_seconds=args.bucket,
+            detection=load_config(args.rules),
         )
-    except PcapReadError as exc:
+    except (PcapReadError, ConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     print(_format_summary(args.pcap, report["summary"]))
     print(_format_flows(report["flows"]))
+    print(_format_alerts(report["alerts"]))
     if args.json:
         args.json.write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(f"\nJSON report written to {args.json}")
+    return 0
+
+
+def _evaluate(args: argparse.Namespace) -> int:
+    from netsentinel.evaluation import evaluate
+
+    try:
+        result = evaluate(args.scenario_dir, load_config(args.rules))
+    except (OSError, ValueError, PcapReadError, ConfigError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"{'scenario':<34} {'truth':<10} {'detected':<18} {'alerts':>6}  result")
+    for row in result["scenarios"]:
+        print(
+            f"{row['scenario']:<34} {','.join(row['truth']) or '-':<10} "
+            f"{','.join(row['detected']) or '-':<18} {row['alerts']:>6}  {row['result']}"
+            + (f"  FP={row['FP']}" if row["FP"] else "")
+            + (f"  FN={row['FN']}" if row["FN"] else "")
+        )
+    t = result["totals"]
+    print(f"\nTotals: TP={t.get('TP', 0)}  FP={t.get('FP', 0)}  FN={t.get('FN', 0)}")
     return 0
 
 
@@ -115,6 +161,20 @@ def _format_flows(f: dict) -> str:
             f"  {t['host']:<40} {t['bytes']:>12} B  "
             f"(sent {t['bytes_sent']}, received {t['bytes_received']})"
         )
+    return "\n".join(lines)
+
+
+def _format_alerts(a: dict) -> str:
+    lines = ["\n=== ALERTS ===", f"Alerts      : {a['count']}  {a['by_severity'] or ''}"]
+    for alert in a["items"]:
+        lines.append(
+            f"\n  [{alert['severity'].upper():<6}] {alert['rule_id']} {alert['rule_name']}"
+            f"  at {alert['start_iso']}"
+        )
+        lines.append(f"           {alert['summary']}")
+        lines.append(f"           evidence: {json.dumps(alert['evidence'])}")
+    if not a["items"]:
+        lines.append("  (none) - no rule threshold was reached")
     return "\n".join(lines)
 
 

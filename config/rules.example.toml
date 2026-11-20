@@ -1,0 +1,23 @@
+# NetSentinel detection thresholds.
+# Copy this file, change values, and run:  netsentinel analyze capture.pcapng --rules my_rules.toml
+# Any key you leave out keeps its default (the values below ARE the defaults).
+
+[port_scan]            # NS-001: one source -> one destination, many distinct ports
+enabled = true
+window_seconds = 60.0
+min_distinct_ports = 20
+high_severity_ports = 100
+
+[traffic_spike]        # NS-002: one source sends a burst of packets
+enabled = true
+bucket_seconds = 1.0
+min_packets = 1000             # absolute floor per bucket
+baseline_multiplier = 10.0     # and >= 10x the source's median packets per bucket
+high_severity_multiplier = 5.0 # peak >= min_packets x 5 -> severity high
+min_baseline_buckets = 10      # capture shorter than this: no baseline, floor only
+
+[failed_connections]   # NS-003: one source -> same IP:port, repeated failed TCP handshakes
+enabled = true
+window_seconds = 60.0
+min_failed = 10
+medium_severity_failed = 50

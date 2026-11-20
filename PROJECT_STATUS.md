@@ -40,7 +40,23 @@ Committed by Ahmed as `4e470a9`.
 - Real captures: `refused_port.pcapng` -> 1 TCP flow REJECTED (port 9999). `web_dns_tracert.pcapng`
   58 437 packets -> 1 063 flows (783 CLOSED, 49 MIDSTREAM, 45 ESTABLISHED, 17 HALF_OPEN, 1 NO_REPLY),
   ~10 s. TCP timeout 60 s -> 300 s removed 42 keep-alive splits. Most of the laptop's traffic is IPv6.
-Next: Phase 4, detection engine (port scan, traffic spike, failed-connection pattern).
+Committed by Ahmed as `5e2e890`.
+
+## Phase 4 — Detection engine (code done 2026-11-20, uncommitted; live loopback capture pending)
+- `detection/`: `models.py` (Rule, Alert), `config.py` (defaults + TOML override with validation,
+  `config/rules.example.toml`, CLI `--rules`), `windows.py` (sliding window, merged episodes),
+  `rules.py` NS-001 port scan / NS-002 unsolicited traffic spike / NS-003 repeated failed
+  connections, `engine.py`. `analysis.py` report now has `alerts`.
+- `scenarios.py` + `evaluation.py`: `netsentinel make-scenarios DIR`, `netsentinel evaluate DIR`
+  (7 labelled synthetic PCAPs, RFC 5737 addresses): TP 4, FP 0, FN 1 (slow scan, documented).
+- NS-002 changed twice after measurements: counting all packets -> FP on bulk download scenario;
+  excluding TCP ACK -> still FP on a real QUIC download in `ping_gateway.pcapng`; final rule =
+  "receiver spoke first = solicited" + TCP ACK skip -> 0 alerts on all 3 lab captures. Also no
+  baseline when capture < 10 buckets (else a capture of only the attack hides it).
+- `lab/scenarios/loopback_test.py` (scan / retry, 127.0.0.1 hard-coded).
+- Docs: `docs/detection.md` (logic, thresholds, FP/FN, measured results).
+Remaining: Ahmed captures `loopback_test.py scan` and `retry` on the loopback adapter and we
+verify NS-001 / NS-003 on real traffic. Next: Phase 5 (FastAPI + SQLite).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -98,3 +114,6 @@ from config.
 | 2026-11-20 | `netsentinel analyze README.md` | clean error, exit code 2 |
 | 2026-11-20 | `pytest -q` (Phase 3) | 33 passed |
 | 2026-11-20 | `netsentinel analyze lab/02_web/web_dns_tracert.pcapng` | 1 063 flows, ~10 s |
+| 2026-11-20 | `pytest -q` (Phase 4) | 62 passed (~16 s) |
+| 2026-11-20 | `netsentinel evaluate` on 7 scenarios | TP 4, FP 0, FN 1 |
+| 2026-11-20 | `netsentinel analyze` on the 3 lab captures | 0 alerts each |

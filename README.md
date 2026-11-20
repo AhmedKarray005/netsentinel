@@ -2,7 +2,7 @@
 
 **Network Traffic Analysis & Intrusion Detection Platform** (personal portfolio project)
 
-> Status: **Phase 3 done** (offline PCAP analysis + flows). Detection rules come next.
+> Status: **Phase 4** (offline PCAP analysis, flows, 3 detection rules). API and dashboard next.
 > This README is updated only with features that exist and are tested.
 
 ## Problem
@@ -21,7 +21,7 @@ Detection rules produce **suspicious indicators, not proof of malicious activity
 |---|---|---|
 | PCAP parsing: protocols, IPs, ports, sizes, DNS | 2 | done, tested |
 | Flow aggregation, TCP states, traffic rates ([how](docs/flows.md)) | 3 | done, tested |
-| Rule engine: port scan, traffic spike, failed-connection pattern | 4 | planned |
+| Rule engine: port scan, traffic spike, failed connections ([rules, limits, results](docs/detection.md)) | 4 | done, tested |
 | SQLite storage + FastAPI REST API | 5 | planned |
 | React + TypeScript dashboard | 6 | planned |
 | Docker Compose, GitHub Actions CI, Trivy | 7 | planned |
@@ -42,6 +42,9 @@ pytest
 ruff check .
 netsentinel --version
 netsentinel analyze path\to\capture.pcapng --top 10 --json report.json
+netsentinel analyze capture.pcapng --rules config\rules.example.toml
+netsentinel make-scenarios scenarios_out
+netsentinel evaluate scenarios_out
 ```
 
 Conventions and lab safety rules: [docs/conventions.md](docs/conventions.md).

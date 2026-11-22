@@ -79,7 +79,10 @@ def connect(path: str | Path) -> sqlite3.Connection:
     path = Path(path)
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # check_same_thread=False: FastAPI may open the connection in one worker thread and close
+    # it in another (found in the live dashboard run). Safe here because each connection
+    # belongs to ONE request and is never used by two threads at the same time.
+    conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row  # rows behave like dicts
     conn.execute("PRAGMA foreign_keys = ON")  # needed for ON DELETE CASCADE
     return conn
@@ -180,6 +183,8 @@ def list_flows(
     ip: str | None = None,
     port: int | None = None,
     tcp_state: str | None = None,
+    since: float | None = None,
+    until: float | None = None,
     sort: str = "start",
     limit: int = 50,
     offset: int = 0,
@@ -197,6 +202,12 @@ def list_flows(
     if tcp_state:
         where.append("tcp_state = ?")
         params.append(tcp_state)
+    if since is not None:  # flows still active at or after `since`
+        where.append("end_ts >= ?")
+        params.append(since)
+    if until is not None:  # flows that started at or before `until`
+        where.append("start_ts <= ?")
+        params.append(until)
     return _page(conn, "flows", where, params, FLOW_SORTS[sort], limit, offset, _flow_row)
 
 

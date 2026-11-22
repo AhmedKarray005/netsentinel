@@ -92,6 +92,20 @@ def test_flow_filters_sorting_and_pagination(client, scan_pcap):
     assert by_bytes[0]["tcp_state"] == "CLOSED"  # open ports carried data
 
 
+def test_flow_time_filter(client, scan_pcap):
+    # Scenario: port i is probed at 1000 + i * 0.05 s, for ports 1..200 (i = 0..199).
+    analysis_id = upload(client, scan_pcap).json()["id"]
+    url = f"/api/analyses/{analysis_id}/flows"
+    first_second = client.get(url, params={"until": 1000.999}).json()
+    assert first_second["total"] == 20  # probes at 1000.00 ... 1000.95
+    window = client.get(url, params={"since": 1005.0, "until": 1005.999}).json()
+    assert window["total"] == 20
+    # Port 22 (open) session runs 1001.05 -> ~1001.19: it is the only flow active in between.
+    active = client.get(url, params={"since": 1001.12, "until": 1001.13}).json()["items"]
+    assert [(f["server_port"], f["tcp_state"]) for f in active] == [(22, "CLOSED")]
+    assert client.get(url, params={"since": 1010, "until": 1000}).status_code == 422
+
+
 def test_alert_filters_across_analyses(client, scan_pcap, retry_pcap):
     scan_id = upload(client, scan_pcap).json()["id"]
     upload(client, retry_pcap)
@@ -117,6 +131,29 @@ def test_delete_removes_flows_and_alerts(client, scan_pcap):
     assert client.get(f"/api/analyses/{analysis_id}").status_code == 404
     assert client.get("/api/alerts").json()["total"] == 0  # ON DELETE CASCADE
     assert client.delete(f"/api/analyses/{analysis_id}").status_code == 404
+
+
+def test_connection_can_be_closed_from_another_thread(tmp_path):
+    # Regression: under uvicorn, the get_db dependency opened the connection in one worker
+    # thread and closed it in another -> sqlite3.ProgrammingError -> HTTP 500.
+    import threading
+
+    from netsentinel import storage
+
+    conn = storage.connect(tmp_path / "t.db")
+    errors = []
+
+    def use_and_close():
+        try:
+            storage.init_db(conn)
+            conn.close()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    worker = threading.Thread(target=use_and_close)
+    worker.start()
+    worker.join()
+    assert errors == []
 
 
 def test_data_survives_an_app_restart(settings, scan_pcap):

@@ -157,14 +157,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ip: str | None = None,
         port: Annotated[int | None, Query(ge=0, le=65535)] = None,
         tcp_state: schemas.TcpState | None = None,
+        since: Annotated[float | None, Query(description="Unix time: flows active from")] = None,
+        until: Annotated[float | None, Query(description="Unix time: flows started by")] = None,
         sort: schemas.FlowSort = "start",
         limit: Limit = 50,
         offset: Offset = 0,
     ) -> schemas.Page[schemas.Flow]:
         require_analysis(conn, analysis_id)
+        if since is not None and until is not None and since > until:
+            raise HTTPException(422, "'since' must be before 'until'")
         items, total = storage.list_flows(
             conn, analysis_id, protocol=protocol, ip=_valid_ip(ip), port=port,
-            tcp_state=tcp_state, sort=sort, limit=limit, offset=offset,
+            tcp_state=tcp_state, since=since, until=until, sort=sort, limit=limit,
+            offset=offset,
         )  # fmt: skip
         return {"items": items, "total": total, "limit": limit, "offset": offset}
 

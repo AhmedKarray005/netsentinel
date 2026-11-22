@@ -7,6 +7,8 @@ FLOW_PROTOCOLS = {"TCP", "UDP", "ICMP", "ICMPv6", "OTHER_IP"}  # ARP is not an I
 
 FlowKey = tuple[str, tuple[str, int], tuple[str, int]]
 
+SYN_RETRY_SECONDS = 3.0  # a SYN this soon after a refused attempt is an OS retry, same flow
+
 
 def flow_key(record: PacketRecord) -> FlowKey:
     """Same key for both directions: (protocol, lower endpoint, higher endpoint).
@@ -63,9 +65,14 @@ class FlowAggregator:
         timeout = self.tcp_idle_timeout if flow.protocol == "TCP" else self.idle_timeout
         if record.timestamp - flow.end > timeout:
             return True  # silence longer than the timeout: a new conversation
-        # A fresh SYN after the old TCP connection closed = the same ports are being reused.
-        # (A late ACK after FIN/FIN is NOT a new flow, so we only split on SYN.)
-        return flow.protocol == "TCP" and flow.is_closed and _is_syn(record.tcp_flags)
+        if flow.protocol != "TCP" or not flow.is_closed or not _is_syn(record.tcp_flags):
+            return False  # (a late ACK after FIN/FIN is NOT a new flow: only a SYN can split)
+        # Windows re-sends a refused SYN once, ~0.5 s later, from the same port: that is the
+        # same connection attempt, not a new one (seen in lab/04_loopback_scan, 2026-11-20).
+        if not flow.handshake_done and record.timestamp - flow.end <= SYN_RETRY_SECONDS:
+            return False
+        # Otherwise a fresh SYN after the old connection closed = the ports are being reused.
+        return True
 
     @staticmethod
     def _new_flow(record: PacketRecord) -> Flow:

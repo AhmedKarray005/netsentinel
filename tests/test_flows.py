@@ -83,6 +83,28 @@ def test_port_reuse_after_close_starts_a_new_flow():
     assert [f.tcp_state for f in flows] == ["CLOSED", "CLOSED"]
 
 
+def test_windows_syn_retry_after_rst_is_the_same_attempt():
+    # Real pattern from lab/04_loopback_scan: SYN, RST, then the same SYN again 0.5 s later.
+    records = [
+        tcp(0.0, C, 51717, S, 9999, "S"),
+        tcp(0.0001, S, 9999, C, 51717, "RA"),
+        tcp(0.5, C, 51717, S, 9999, "S"),
+        tcp(0.5001, S, 9999, C, 51717, "RA"),
+    ]
+    (flow,) = run(records)
+    assert (flow.tcp_state, flow.packets_fwd) == ("REJECTED", 2)
+
+
+def test_same_ports_reused_long_after_a_refusal_is_a_new_attempt():
+    records = [
+        tcp(0.0, C, 51717, S, 9999, "S"),
+        tcp(0.0001, S, 9999, C, 51717, "RA"),
+        tcp(10.0, C, 51717, S, 9999, "S"),
+        tcp(10.0001, S, 9999, C, 51717, "RA"),
+    ]
+    assert len(run(records)) == 2
+
+
 def test_idle_timeout_splits_flows():
     dns = [
         PacketRecord(0.0, 80, "UDP", C, "10.0.0.53", 40000, 53),

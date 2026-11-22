@@ -104,5 +104,19 @@ they show the rules behave as designed, not real-world accuracy.
 
 `lab/scenarios/loopback_test.py` connects to ports 1-200 (`scan`) or 15 times to port 9999
 (`retry`) on 127.0.0.1 only; the target is hard-coded. Capture on the loopback adapter, then
-run `netsentinel analyze` on the capture. A run on 2026-11-20 (without capture) took 5.1 s and
-found port 135 open (Windows RPC).
+run `netsentinel analyze` on the capture.
+
+Results on 2026-11-20 (captures in `lab/04_loopback_scan/`, not in Git):
+
+| Capture | Expected | Got |
+|---|---|---|
+| `scan.pcapng` (660 packets) | NS-001 | **NS-001 high**: 199 distinct ports in 4.6 s, 198 refused + port 135 open (Windows RPC) |
+| `retry.pcapng` (64 packets) | NS-003 | **NS-003 low**: 15 failed connections to 127.0.0.1:9999 in 21.1 s |
+
+Discrepancies found and explained:
+- First run counted 29 failures for 15 attempts (and 326 for the scan): Windows re-sends a
+  refused SYN once, 0.5 s later, from the same source port. The flow aggregator treated it as a
+  new connection. Fixed: a SYN within 3 s of a refused, never-established attempt on the same
+  ports stays in the same flow (`SYN_RETRY_SECONDS`, tested).
+- Port 137 (NetBIOS) never appears in the scan capture (199 ports, not 200): no packet was
+  seen for it. Probably handled inside the Windows network stack; not investigated further.

@@ -27,6 +27,7 @@ ARP is not an IP conversation and is not turned into flows.
 | No packet for `idle_timeout` (UDP/ICMP, default 60 s) | UDP has no "close": silence is the only signal |
 | No packet for `tcp_idle_timeout` (TCP, default 300 s) | Idle TCP connections send keep-alives every 1-2 min; a short timeout cuts one connection into pieces |
 | A new SYN after the flow saw FIN from both sides or a RST | The same ports are being reused for a new connection |
+| ...except a SYN within 3 s of a refused attempt that never completed its handshake | That is the OS retrying the same attempt (Windows re-sends a refused SYN after 0.5 s) |
 | End of the capture | Remaining flows are closed as they are |
 
 A late ACK after FIN/FIN does **not** start a new flow (only a SYN does).

@@ -76,9 +76,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "serve":
         import uvicorn
 
+        # log_config=None: uvicorn keeps its hands off logging, so its own messages go
+        # through our structured setup (see netsentinel.logging_setup).
         uvicorn.run(
-            "netsentinel.api.app:create_app_from_env", factory=True,
-            host=args.host, port=args.port,
+            "netsentinel.api.server:create_server_app", factory=True,
+            host=args.host, port=args.port, log_config=None,
         )  # fmt: skip
         return 0
     print(f"netsentinel {__version__} - use 'netsentinel analyze <file>' (see --help).")

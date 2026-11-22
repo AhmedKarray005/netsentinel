@@ -1,0 +1,18 @@
+# Weekly pull requests when a dependency, base image or CI action has a newer version.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+    groups:
+      frontend:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directories: [/, /docker]
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

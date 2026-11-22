@@ -1,0 +1,47 @@
+# docker compose up --build    -> dashboard on http://localhost:8080
+# Settings come from .env (copy .env.example); every value has a safe default.
+name: netsentinel
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: netsentinel-api:local
+    environment:
+      NETSENTINEL_LOG_LEVEL: ${NETSENTINEL_LOG_LEVEL:-INFO}
+      NETSENTINEL_LOG_FORMAT: ${NETSENTINEL_LOG_FORMAT:-json}
+      NETSENTINEL_MAX_UPLOAD_MB: ${NETSENTINEL_MAX_UPLOAD_MB:-50}
+      NETSENTINEL_CORS_ORIGINS: ""  # the dashboard is served from the same origin by nginx
+    volumes:
+      - netsentinel-data:/data  # database survives container rebuilds
+    ports:
+      - "127.0.0.1:${NETSENTINEL_API_PORT:-8000}:8000"  # API docs at /docs, this PC only
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: netsentinel-web:local
+    ports:
+      - "127.0.0.1:${NETSENTINEL_WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy  # nginx starts once the API answers /api/health
+    read_only: true
+    tmpfs:
+      - /tmp  # nginx-unprivileged keeps its pid file and upload buffers here
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  netsentinel-data:

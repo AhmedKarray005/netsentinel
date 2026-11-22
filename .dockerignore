@@ -1,0 +1,13 @@
+# Allow-list: only what the images need goes into the build context.
+# Keeps captures (lab/), databases (data/), the venv and secrets (.env) out of every image.
+**
+!pyproject.toml
+!README.md
+!src/
+!config/
+!docker/
+!frontend/
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+**/*.pyc

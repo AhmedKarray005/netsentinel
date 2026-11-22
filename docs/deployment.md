@@ -1,0 +1,88 @@
+# Deployment, CI and logging
+
+## Run everything with Docker
+
+```powershell
+copy .env.example .env      # optional, every value has a default
+docker compose up --build   # first build takes a few minutes
+```
+
+- Dashboard: http://localhost:8080 (nginx serves the React build and forwards `/api` to the API)
+- API docs: http://localhost:8000/docs
+- Stop: `Ctrl+C`, then `docker compose down`. Add `-v` to also delete the database volume.
+
+```mermaid
+flowchart LR
+  B[Browser] -->|127.0.0.1:8080| W["web: nginx (unprivileged)<br/>static files + /api proxy"]
+  W -->|api:8000, internal network| A["api: FastAPI + analysis<br/>user 10001"]
+  A --> V[(volume netsentinel-data<br/>/data/netsentinel.db)]
+```
+
+| Choice | Why |
+|---|---|
+| Two images (`Dockerfile`, `docker/web.Dockerfile`), multi-stage | runtime images contain no compiler, no Node, no source tree |
+| Non-root users (API uid 10001, nginx-unprivileged on 8080) | a parsing bug in a hostile capture must not give root |
+| `read_only: true` + `tmpfs: /tmp`, `cap_drop: ALL`, `no-new-privileges` | the containers cannot change their own files or gain privileges |
+| Ports published on `127.0.0.1` only | no authentication yet, so not reachable from the LAN |
+| Same origin through nginx | no CORS needed in production (`NETSENTINEL_CORS_ORIGINS` empty) |
+| Health checks: API `/api/health` (runs a DB query), nginx `/healthz` | `depends_on: service_healthy` starts nginx only once the API answers |
+| Allow-list `.dockerignore` | captures (`lab/`), databases and `.env` can never end up in an image |
+| Upload limit enforced 3 times | nginx `client_max_body_size 51m`, API `Content-Length` check, size counted while saving |
+
+If you raise `NETSENTINEL_MAX_UPLOAD_MB`, raise `client_max_body_size` in `docker/nginx.conf` too.
+
+## Configuration (environment variables)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NETSENTINEL_DB_PATH` | `data/netsentinel.db` (`/data/...` in the image) | SQLite file |
+| `NETSENTINEL_UPLOAD_DIR` | `data/uploads` | temporary uploads, deleted after analysis |
+| `NETSENTINEL_MAX_UPLOAD_MB` | `50` | upload size limit |
+| `NETSENTINEL_RULES_FILE` | none | TOML overriding detection thresholds |
+| `NETSENTINEL_CORS_ORIGINS` | `http://localhost:5173` | comma-separated, for the dev server |
+| `NETSENTINEL_LOG_LEVEL` | `INFO` | `DEBUG` also logs health checks |
+| `NETSENTINEL_LOG_FORMAT` | `json` | `text` for a human-readable terminal |
+
+Invalid values stop the server at startup with a clear error, not at the first request.
+
+## Structured logs
+
+One JSON object per line on stdout (`netsentinel.logging_setup`). Uvicorn's own messages go
+through the same formatter. Every HTTP request gets one line with a request ID:
+
+```json
+{"time": "2026-11-22T23:29:06.204+00:00", "level": "INFO", "logger": "netsentinel.http", "message": "GET /api/analyses/99 404 2.3 ms", "request_id": "3eda64027ec64909", "method": "GET", "path": "/api/analyses/99", "status": 404, "duration_ms": 2.3}
+```
+
+(real line from `netsentinel serve` on 2026-11-22). The ID is returned in the `X-Request-ID`
+response header. Behind nginx, nginx's own `$request_id` is forwarded, so one request can be
+followed through both logs. Incoming IDs are only kept if they match `[A-Za-z0-9._-]{1,64}`,
+so a client cannot inject fake log lines. Captures are never logged, only their SHA-256 prefix.
+
+Read them: `docker compose logs api`, or filter with `jq`, e.g.
+`docker compose logs --no-log-prefix api | jq 'select(.status >= 400)'`.
+
+## CI (GitHub Actions, `.github/workflows/ci.yml`)
+
+| Job | Steps |
+|---|---|
+| backend | `ruff check`, `ruff format --check`, `pytest` (Python 3.13) |
+| frontend | `npm ci`, typecheck, Vitest, production build, `npm audit --omit=dev --audit-level=high` |
+| security (after both) | Trivy on the repository (dependencies, secrets, Dockerfile/compose misconfigurations); build both images; Trivy on each image; `docker compose up --wait`, then a real upload through nginx of a generated synthetic port scan, which must return the NS-001 high alert |
+
+Trivy fails the build on **fixable** HIGH/CRITICAL findings (`ignore-unfixed`: a vulnerability
+with no patched version yet would block every build without anything to do about it).
+
+Supply chain: the workflow has read-only permissions, and every action is pinned to a full
+commit SHA (tags can be moved; the `trivy-action` tags were hijacked in March 2026). Dependabot
+(`.github/dependabot.yml`) proposes weekly updates for pip, npm, base images and actions.
+
+## Not done / limits
+
+- No authentication or TLS: local use only. Exposing it beyond `127.0.0.1` would need both
+  (for example TLS on nginx + an auth proxy).
+- Base images use moving tags (`python:3.13-slim`, `node:26-alpine`,
+  `nginxinc/nginx-unprivileged:stable-alpine`); pinning by digest would make builds fully
+  reproducible.
+- Analysis runs inside the request (a 50 MB capture can take a minute); a job queue would be
+  the next step for bigger files.

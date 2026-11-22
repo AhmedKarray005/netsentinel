@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-20
+Last updated: 2026-11-23
 
 ## Current phase: 1 — Networking lab (almost done)
 
@@ -74,7 +74,42 @@ in `flows/aggregator.py` + 2 tests. Port 137 never seen in the scan capture (not
 - Docs: `docs/api.md`. 87 tests pass.
 - Open: our own log lines are not shown under `serve` (Phase 7 logging); Starlette warns that
   TestClient + httpx is deprecated ("install httpx2"), not acted on.
-Next: Phase 6 (React + TypeScript dashboard).
+Committed by Ahmed as `f326a63` (+ `3ba0090` for the SYN retry fix).
+
+## Phase 6 — Dashboard (done 2026-11-22, uncommitted)
+- `frontend/`: Vite 8 + React 19 + TypeScript 7 + Recharts 3 + React Router 7; Vitest 5 +
+  Testing Library. `npm audit --omit=dev`: 0 vulnerabilities (2026-11-22).
+- `src/api.ts` (client + ApiError), `types.ts`, `format.ts`, `state.tsx` (selected capture
+  context, `useLoad`), `components.tsx`, `charts.tsx` (HTML bar lists, Recharts timeline with
+  crosshair + table fallback), pages Overview / Traffic / Alerts / Upload. Dev proxy /api -> 8000.
+- Backend additions: flows `since` / `until` filters (+ test); SQLite `check_same_thread=False`
+  after a real HTTP 500 under uvicorn (connection opened and closed in different worker
+  threads; + regression test).
+- Verified live in the browser pane with 6 uploaded captures, light/dark, 375 px; screenshots in
+  `docs/screenshots/`. Docs: `docs/dashboard.md`.
+- Tests: backend 89 passed; frontend 15 passed; `tsc` clean; `npm run build` OK (695 kB JS,
+  205 kB gzip, Vite size warning).
+
+## Phase 7 — DevOps (in progress, started 2026-11-23, uncommitted)
+Done:
+- Structured logging: `logging_setup.py` (JSON lines on stdout, `NETSENTINEL_LOG_LEVEL` /
+  `NETSENTINEL_LOG_FORMAT`, uvicorn messages through the same formatter via `log_config=None`).
+  `api/server.py`: request log line + `X-Request-ID` (safe incoming IDs kept), health checks
+  at DEBUG only, startup line; `netsentinel serve` now uses `create_server_app`.
+  `app.py` routes unchanged. Live check: JSON lines for startup, 200 and 404 requests.
+- Containers: `Dockerfile` (API, multi-stage, uid 10001, HEALTHCHECK, /data volume),
+  `docker/web.Dockerfile` + `docker/nginx.conf` (React build on nginx-unprivileged, /api proxy,
+  SPA fallback, security headers, 51 MB body limit, /healthz), `docker-compose.yml` (127.0.0.1
+  ports, read-only root, cap_drop ALL, no-new-privileges, depends_on service_healthy),
+  allow-list `.dockerignore`, `.env.example`. `docker compose config`: valid.
+- CI: `.github/workflows/ci.yml` (backend ruff + pytest; frontend typecheck/test/build/audit;
+  Trivy fs + both images; compose smoke test with a real upload expecting NS-001 high),
+  actions pinned by SHA (checkout v7.0.1, setup-python v7.1.0, setup-node v7.1.0,
+  trivy-action v0.36.0, Trivy v0.76.2, checked with `git ls-remote` 2026-11-23);
+  `.github/dependabot.yml`.
+- Docs: `docs/deployment.md`. Tests: 95 passed (6 new in `tests/test_logging.py`).
+Not verified yet: no image has been built (Docker daemon not running, Docker Desktop 20.10.22
+from 2022, only 1.5 GB free on C:); CI not run (no GitHub repository yet).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -137,3 +172,9 @@ from config.
 | 2026-11-20 | `netsentinel analyze` on the 3 lab captures | 0 alerts each |
 | 2026-11-20 | `pytest -q` (Phase 5) | 87 passed (~20 s) |
 | 2026-11-20 | `netsentinel serve` + curl upload of `scan.pcapng` | 201, 0.18 s, NS-001 high |
+| 2026-11-22 | `pytest -q` (Phase 6) | 89 passed |
+| 2026-11-22 | `npm test` / `tsc --noEmit` / `npm run build` | 15 passed / clean / built |
+| 2026-11-22 | dashboard live, 6 captures, 60 API requests after fix | 4 pages OK, 0 errors |
+| 2026-11-23 | `pytest -q` (Phase 7 logging) / ruff | 95 passed / clean |
+| 2026-11-23 | `netsentinel serve` log output | JSON lines, request IDs, 404 logged |
+| 2026-11-23 | `docker compose config --quiet` | valid (images not built: daemon off) |

@@ -85,8 +85,8 @@ def normal_browsing() -> list[Packet]:
 
 
 def port_scan_connect() -> list[Packet]:
-    """Connect scan of ports 1-200 in ~10 s. Ports 22, 80, 443 are open."""
-    open_ports = {22, 80, 443}
+    """Connect scan of ports 1-200 in ~10 s. Ports 22 and 80 are open."""
+    open_ports = {22, 80}
     packets = []
     for i, port in enumerate(range(1, 201)):
         t = 1000.0 + i * 0.05

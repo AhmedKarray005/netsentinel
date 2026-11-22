@@ -16,6 +16,7 @@ dist/
 !tests/fixtures/**/*.pcap
 
 # Local data and secrets
+data/
 *.db
 *.sqlite
 .env

@@ -75,10 +75,13 @@ def read_pcap(path: str | Path) -> Iterator[PacketRecord]:
     path = Path(path)
     if not path.is_file():
         raise PcapReadError(f"File not found: {path}")
-    try:
-        reader = PcapReader(str(path))
-    except (Scapy_Exception, OSError, ValueError) as exc:
-        raise PcapReadError(f"Not a valid PCAP/PCAPNG file: {path} ({exc})") from exc
-    with reader:
-        for packet in reader:
-            yield to_record(packet)
+    # We open the file ourselves: if Scapy rejects it, it does not close a file it opened,
+    # and on Windows an open file cannot be deleted (found by the API upload tests).
+    with path.open("rb") as handle:
+        try:
+            reader = PcapReader(handle)
+        except (Scapy_Exception, OSError, ValueError, EOFError) as exc:
+            raise PcapReadError(f"Not a valid PCAP/PCAPNG file: {path} ({exc})") from exc
+        with reader:
+            for packet in reader:
+                yield to_record(packet)

@@ -42,7 +42,12 @@ Committed by Ahmed as `4e470a9`.
   ~10 s. TCP timeout 60 s -> 300 s removed 42 keep-alive splits. Most of the laptop's traffic is IPv6.
 Committed by Ahmed as `5e2e890`.
 
-## Phase 4 — Detection engine (code done 2026-11-20, uncommitted; live loopback capture pending)
+## Phase 4 — Detection engine (done 2026-11-20; main work committed by Ahmed as `d6b3771`)
+Live lab done: `lab/04_loopback_scan/scan.pcapng` -> NS-001 high (199 ports, 4.6 s);
+`retry.pcapng` -> NS-003 low (15 failures). Fix after it (uncommitted): Windows SYN retry 0.5 s
+after RST was counted as a new connection (29 failures for 15 attempts) -> `SYN_RETRY_SECONDS`
+in `flows/aggregator.py` + 2 tests. Port 137 never seen in the scan capture (not investigated).
+64 tests pass; 0 alerts on the 3 earlier lab captures; scenarios TP 4 / FP 0 / FN 1.
 - `detection/`: `models.py` (Rule, Alert), `config.py` (defaults + TOML override with validation,
   `config/rules.example.toml`, CLI `--rules`), `windows.py` (sliding window, merged episodes),
   `rules.py` NS-001 port scan / NS-002 unsolicited traffic spike / NS-003 repeated failed
@@ -55,8 +60,21 @@ Committed by Ahmed as `5e2e890`.
   baseline when capture < 10 buckets (else a capture of only the attack hides it).
 - `lab/scenarios/loopback_test.py` (scan / retry, 127.0.0.1 hard-coded).
 - Docs: `docs/detection.md` (logic, thresholds, FP/FN, measured results).
-Remaining: Ahmed captures `loopback_test.py scan` and `retry` on the loopback adapter and we
-verify NS-001 / NS-003 on real traffic. Next: Phase 5 (FastAPI + SQLite).
+## Phase 5 — Backend and database (done 2026-11-20, uncommitted)
+- `analysis.py`: `run_analysis` -> `AnalysisResult` (all flows + alerts); `analyze_file` unchanged.
+- `storage/db.py`: sqlite3, tables analyses / flows / alerts (cascade delete), filtered and
+  paginated queries with placeholders + sort whitelist.
+- `api/`: `settings.py` (env vars), `uploads.py` (extension, size, magic number, random temp
+  name, cleaned display name, sha256), `schemas.py` (Pydantic responses), `app.py` (health,
+  rules, analyses CRUD, flows, alerts; CORS for the dashboard). CLI `netsentinel serve`
+  (127.0.0.1 by default). Deps: fastapi, uvicorn, python-multipart; dev: httpx.
+- Bug found by tests: Scapy left the file open when rejecting a truncated capture -> Windows
+  could not delete the upload. `read_pcap` now opens the file itself.
+- Live check: real `scan.pcapng` uploaded via curl -> 201 in 0.18 s, NS-001 high, 0 temp files.
+- Docs: `docs/api.md`. 87 tests pass.
+- Open: our own log lines are not shown under `serve` (Phase 7 logging); Starlette warns that
+  TestClient + httpx is deprecated ("install httpx2"), not acted on.
+Next: Phase 6 (React + TypeScript dashboard).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -117,3 +135,5 @@ from config.
 | 2026-11-20 | `pytest -q` (Phase 4) | 62 passed (~16 s) |
 | 2026-11-20 | `netsentinel evaluate` on 7 scenarios | TP 4, FP 0, FN 1 |
 | 2026-11-20 | `netsentinel analyze` on the 3 lab captures | 0 alerts each |
+| 2026-11-20 | `pytest -q` (Phase 5) | 87 passed (~20 s) |
+| 2026-11-20 | `netsentinel serve` + curl upload of `scan.pcapng` | 201, 0.18 s, NS-001 high |

@@ -52,6 +52,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evaluate_cmd.add_argument("scenario_dir", type=Path, help="Folder containing manifest.json")
     evaluate_cmd.add_argument("--rules", type=Path, metavar="FILE")
+
+    serve = commands.add_parser("serve", help="Start the REST API (docs at /docs).")
+    serve.add_argument(
+        "--host", default="127.0.0.1",
+        help="Interface to listen on (default 127.0.0.1 = this computer only)",
+    )  # fmt: skip
+    serve.add_argument("--port", type=int, default=8000)
     return parser
 
 
@@ -66,6 +73,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "evaluate":
         return _evaluate(args)
+    if args.command == "serve":
+        import uvicorn
+
+        uvicorn.run(
+            "netsentinel.api.app:create_app_from_env", factory=True,
+            host=args.host, port=args.port,
+        )  # fmt: skip
+        return 0
     print(f"netsentinel {__version__} - use 'netsentinel analyze <file>' (see --help).")
     return 0
 

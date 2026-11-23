@@ -126,7 +126,13 @@ Local container run (2026-11-23, Docker Desktop 20.10.22, uncommitted fixes):
   stable-alpine still had 1.30.6 with 6 CVEs). Trivy 0.76 cannot talk to Docker 20.10's API,
   so images were scanned from `docker save` tar files. Image scan needs > 5 min here -> CI
   `timeout: 15m`.
-Not verified yet: CI on GitHub (no repository yet).
+GitHub: private repo https://github.com/AhmedKarray005/netsentinel created 2026-11-23 (gh CLI
+2.105.0). First CI run (45171607023, commit 4d67af5): frontend OK, backend 1 failed / 94 passed:
+`clean_filename` used `Path().name`, which on Linux does not split on `\`, so
+`..\..\windows\system32\scan.pcap` was kept whole (display name only, never a disk path, but
+the cleanup did not work in the Docker image either). Fixed with `PureWindowsPath`, test now
+covers `\`, `/` and mixed separators; checked on Linux in `python:3.13-slim`. Security job was
+skipped (needs backend). Next CI run: result to be recorded.
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 

@@ -191,8 +191,11 @@ def test_too_large_upload_is_refused(client, tmp_path, settings):
     assert not settings.upload_dir.exists() or list(settings.upload_dir.iterdir()) == []
 
 
-def test_path_in_filename_is_neutralized(client, scan_pcap):
-    body = upload(client, scan_pcap, name="..\\..\\windows\\system32\\scan.pcap").json()
+@pytest.mark.parametrize(
+    "name", ["..\\..\\windows\\system32\\scan.pcap", "../../etc/scan.pcap", "C:\\x/y\\scan.pcap"]
+)
+def test_path_in_filename_is_neutralized(client, scan_pcap, name):
+    body = upload(client, scan_pcap, name=name).json()
     assert body["filename"] == "scan.pcap"
 
 

@@ -3,7 +3,7 @@
 import hashlib
 import re
 import secrets
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from fastapi import HTTPException, UploadFile
 
@@ -22,7 +22,9 @@ CHUNK = 1024 * 1024
 def clean_filename(name: str | None) -> str:
     """Keep only a safe display name: no folders, no control characters, max 200 chars.
     It is only stored for display; it is NEVER used to build a path on disk."""
-    base = Path(name or "capture").name
+    # PureWindowsPath splits on both "/" and "\" on every OS. Path() on Linux (the Docker image,
+    # CI) would keep "..\..\x.pcap" whole; found by the first CI run on 2026-11-23.
+    base = PureWindowsPath(name or "capture").name
     base = re.sub(r"[^\w.\- ]", "_", base)[:200]
     return base or "capture"
 

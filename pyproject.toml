@@ -9,7 +9,7 @@ description = "Network traffic analysis and rule-based intrusion detection platf
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "scapy>=2.6",
+    "scapy>=2.8.0",
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "python-multipart>=0.0.9",  # needed by FastAPI to receive file uploads

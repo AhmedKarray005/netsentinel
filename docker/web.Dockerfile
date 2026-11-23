@@ -19,6 +19,17 @@ FROM nginxinc/nginx-unprivileged:mainline-alpine
 USER root
 RUN apk upgrade --no-cache
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Cloud Run variant (docs/gcp-deployment.md): there, nginx and the API run as two containers of
+# one service and share localhost, so /api goes to 127.0.0.1:8000 instead of the compose host
+# name "api". Generated from the same file, so the two can never drift apart. Cloud Run starts
+# nginx with `-c /etc/nginx/nginx-cloudrun.conf`; docker compose keeps the default config.
+RUN mkdir -p /etc/nginx/cloudrun \
+    && sed 's#http://api:8000#http://127.0.0.1:8000#' /etc/nginx/conf.d/default.conf \
+       > /etc/nginx/cloudrun/default.conf \
+    && sed 's#/etc/nginx/conf.d/\*.conf#/etc/nginx/cloudrun/*.conf#' /etc/nginx/nginx.conf \
+       > /etc/nginx/nginx-cloudrun.conf \
+    && grep -q 'proxy_pass http://127.0.0.1:8000;' /etc/nginx/cloudrun/default.conf \
+    && grep -q 'include /etc/nginx/cloudrun/\*.conf;' /etc/nginx/nginx-cloudrun.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 # The base image already runs as uid 101 ("nginx"); saying it here makes it explicit and
 # keeps it true even if a later instruction switched to root.

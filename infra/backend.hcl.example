@@ -1,0 +1,2 @@
+# Copy to backend.hcl (git-ignored). The bucket is created once by hand, see docs/gcp-deployment.md.
+bucket = "your-project-id-tfstate"

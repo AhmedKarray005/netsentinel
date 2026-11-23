@@ -31,3 +31,11 @@ Thumbs.db
 .vscode/
 .idea/
 demo_out/
+
+# Terraform: state, plans, provider cache and local values never go to Git
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/terraform.tfvars
+infra/backend.hcl

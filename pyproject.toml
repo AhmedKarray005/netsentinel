@@ -12,7 +12,7 @@ license = "MIT"
 dependencies = [
     "scapy>=2.8.0",
     "fastapi>=0.165.0",
-    "uvicorn>=0.30",
+    "uvicorn>=0.54.0",
     "python-multipart>=0.0.9",  # needed by FastAPI to receive file uploads
 ]
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77"]  # 77+: SPDX `license = "MIT"`
+requires = ["setuptools>=84.2.1"]  # 77+: SPDX `license = "MIT"`
 build-backend = "setuptools.build_meta"
 
 [project]

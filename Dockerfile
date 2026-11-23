@@ -2,14 +2,14 @@
 # Build:  docker build -t netsentinel-api .
 
 # ---- stage 1: build a wheel (the packaged project) --------------------------------------
-FROM python:3.13-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /src
 COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip wheel --no-cache-dir --wheel-dir /wheels .
 
 # ---- stage 2: small runtime image, no build tools, no source tree -----------------------
-FROM python:3.13-slim
+FROM python:3.15-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     NETSENTINEL_DB_PATH=/data/netsentinel.db \

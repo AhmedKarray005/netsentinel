@@ -80,20 +80,50 @@ Thresholds are in `config/rules.example.toml` (defaults) and can be overridden w
 ### Labelled synthetic scenarios (`netsentinel make-scenarios DIR` then `netsentinel evaluate DIR`)
 
 Packets are crafted in memory and written to PCAP files: nothing is sent on a network.
-Addresses are RFC 5737 documentation ranges. Result on 2026-11-20 with default thresholds:
+Addresses are RFC 5737 documentation ranges. Each scenario says what really happened
+(**truth**: rule + the source IP it should blame) and what we **predicted** the rules would do,
+written before running them, including the known limits. A hit only counts if the alert blames
+the right host: right rule + wrong source = 1 false positive + 1 false negative.
 
-| Scenario | Truth | Detected | Result |
+Result on 2026-11-23, default thresholds (14 scenarios, 7 of them added in Phase 8):
+
+| Scenario | Truth | Detected | Predicted | As predicted |
+|---|---|---|---|---|
+| normal_browsing (40 HTTPS sessions + DNS) | - | - | no alert | yes |
+| port_scan_connect (200 ports, 10 s) | NS-001 | NS-001 | detected | yes |
+| port_scan_syn (100 ports, half-open) | NS-001 | NS-001 | detected | yes |
+| slow_port_scan (30 ports, 1 every 5 s) | NS-001 | - | **missed** | yes |
+| udp_flood (5000 packets in 1 s) | NS-002 | NS-002 | detected | yes |
+| bulk_download (5 s at 1500 packets/s) | - | - | no alert | yes |
+| repeated_failed_connections (25 to port 5432) | NS-003 | NS-003 | detected | yes |
+| scan_in_background_traffic (200-port scan while a workstation browses) | NS-001 | NS-001, scanner blamed, not the workstation | detected | yes |
+| horizontal_scan (port 445 on 60 hosts in 6 s) | NS-001 | - | **missed** | yes |
+| distributed_flood (20 sources x 400 UDP packets/s) | NS-002 x 20 sources | - | **missed** | yes |
+| syn_flood (3000 unanswered SYNs in 1 s) | NS-002 + NS-003 | NS-002 + NS-003 | detected | yes |
+| monitoring_checks (monitoring server, 25 open ports every 60 s) | - | NS-001 | **false alarm** | yes |
+| dns_heavy_client (300 lookups in 10 s) | - | - | no alert | yes |
+| service_restart (8 refused, then normal sessions) | - | - | no alert | yes |
+
+| Rule | Attacks noticed | Scenarios with a false alarm | Precision / recall, counted per (rule, source) |
 |---|---|---|---|
-| normal_browsing (40 HTTPS sessions + DNS) | - | - | PASS |
-| port_scan_connect (200 ports, 10 s) | NS-001 | NS-001 | PASS |
-| port_scan_syn (100 ports, half-open) | NS-001 | NS-001 | PASS |
-| slow_port_scan (30 ports, 1 every 5 s) | NS-001 | - | **FN** (known limit) |
-| udp_flood (5000 packets in 1 s) | NS-002 | NS-002 | PASS |
-| bulk_download (5 s at 1500 packets/s) | - | - | PASS |
-| repeated_failed_connections (25 to port 5432) | NS-003 | NS-003 | PASS |
+| NS-001 port scan | 3 / 5 (misses slow + horizontal scans) | 1 (monitoring) | 75 % / 60 % |
+| NS-002 traffic spike | 2 / 3 (misses the distributed flood) | 0 | 100 % / 9 % (the 20 flood sources count as 20 misses) |
+| NS-003 failed connections | 2 / 2 | 0 | 100 % / 100 % |
 
-Totals: TP = 4, FP = 0, FN = 1. These scenarios were written by us together with the rules, so
-they show the rules behave as designed, not real-world accuracy.
+All 14 scenarios behaved as predicted. With `window_seconds = 300` for NS-001 the slow scan is
+caught too (4 / 5 scans; tested in `tests/test_scenarios.py`).
+
+**How to read this.** The scenarios were written by the same person as the rules, to check that
+each rule does what it was designed to do and fails where we said it would. They are not a
+measure of real-world accuracy: real networks have traffic nobody thought of when writing a
+scenario. The percentages only mean something next to the table above them.
+
+**Bug found while measuring (fixed 2026-11-23).** The sliding window (`detection/windows.py`)
+merged two bursts from the same source into one episode whenever no other event of that source
+sat between them, even hours apart: two scans 400 s apart gave 1 alert "200 ports in 409 s"
+instead of 2. Found by the benchmark (a capture with about 10 copies of the same scan gave 1 alert), fixed, regression test
+`test_bursts_far_apart_are_separate_episodes`. No result above changed (each scenario has at most
+one burst per source), the 5 lab captures give the same alerts as before.
 
 ### Real traffic (own laptop, 2026-11-20)
 

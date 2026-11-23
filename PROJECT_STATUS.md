@@ -2,7 +2,27 @@
 
 Last updated: 2026-11-23
 
-## Current phase: 1 — Networking lab (almost done)
+## Current phase: 8 — Validation and portfolio (in progress, started 2026-11-23)
+Done (uncommitted):
+- Scenarios 7 -> 14 (`scenarios.py`): scan inside normal traffic, horizontal scan, distributed
+  flood, SYN flood, monitoring checks, heavy DNS client, service restart. Each has the truth as
+  (rule, source IP to blame) and a prediction written before running (detected / no alert /
+  missed / false alarm).
+- `evaluation.py`: scores (rule, source) pairs (right rule + wrong host = FP + FN), per-rule
+  precision/recall, attack-level "noticed x/y", "behaved as predicted". `evaluate` CLI shows it.
+  Result: 14/14 as predicted; NS-001 3/5 attacks, 1 false alarm; NS-002 2/3; NS-003 2/2.
+- **Bug fixed** in `detection/windows.py`: two bursts of one source far apart in time were
+  merged when no other event of that source sat between them (the `+ 1` in the merge test).
+  Found by the benchmark (about 10 scan copies -> 1 alert). Regression test added; scenario
+  results and the 5 lab captures unchanged.
+- `scripts/benchmark.py` + `bench` extra (psutil): ~5 000 packets/s single core, linear;
+  1M packets 219 s, 228 MB peak; memory follows flows. cProfile: ~81 % of time in Scapy decoding.
+  Raw: `docs/results/benchmark_2026-11-23.json`; write-up `docs/results.md`.
+- `docs/demo.md` (5-min demo script), `docs/detection.md` results section rewritten.
+- 99 tests pass locally, ruff clean. Not yet run in CI.
+Left: final README, CV/LinkedIn texts, Ahmed's choices (license, make repo public).
+
+## Phase 1 — Networking lab (done)
 
 Experiments run by Ahmed on 2026-11-20 (results reported by him; captures in `lab/`, git-ignored):
 - `lab/01_ping/ping_gateway.pcapng`: ping to home gateway 192.168.1.254 (/24 Wi-Fi). 4 request/reply
@@ -143,7 +163,8 @@ a maintainer, points to commit ed142fd; my old pin a9c7b0f was the tag object, s
 #3 httpx>=0.28.1, #4 ruff>=0.17.6, #5 scapy>=2.8.0, #6 fastapi>=0.165.0, #7 pytest>=9.2.0
 (minimum versions only; CI already installed the newest), #2 API image python:3.13-slim ->
 3.15-slim (image built, Trivy clean, compose smoke test passed). CI backend job now tests on
-3.13 and 3.15 (matrix): result to be checked after the next push.
+3.13 and 3.15 (matrix): run 45212157026 (commit 49dffa7) all green: backend 3.13 37 s,
+backend 3.15 41 s, frontend 25 s, Containers + Trivy 2 min 6 s. **Phase 7 done.**
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 

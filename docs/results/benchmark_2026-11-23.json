@@ -1,0 +1,126 @@
+{
+  "machine": {
+    "date": "2026-11-23T16:38:11+00:00",
+    "python": "3.13.12",
+    "os": "Windows-11-10.0.26300-SP0",
+    "cpu": "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel",
+    "logical_cpus": 12,
+    "ram_gb": 15.8
+  },
+  "results": [
+    {
+      "file": "synthetic_100000.pcap",
+      "size_mb": 23.6,
+      "packets": 100000,
+      "flows": 27670,
+      "alerts": 99,
+      "runs": 3,
+      "wall_s_best": 19.05,
+      "wall_s_all": [
+        20.61,
+        19.58,
+        19.05
+      ],
+      "cpu_s": 18.98,
+      "packets_per_s": 5249,
+      "peak_mem_mb": 74.7,
+      "import_s": 0.44,
+      "kind": "synthetic"
+    },
+    {
+      "file": "synthetic_300000.pcap",
+      "size_mb": 70.9,
+      "packets": 300000,
+      "flows": 82862,
+      "alerts": 296,
+      "runs": 3,
+      "wall_s_best": 58.7,
+      "wall_s_all": [
+        59.33,
+        60.05,
+        58.7
+      ],
+      "cpu_s": 58.47,
+      "packets_per_s": 5111,
+      "peak_mem_mb": 108.6,
+      "import_s": 0.46,
+      "kind": "synthetic"
+    },
+    {
+      "file": "synthetic_1000000.pcap",
+      "size_mb": 236.4,
+      "packets": 1000000,
+      "flows": 276164,
+      "alerts": 987,
+      "runs": 3,
+      "wall_s_best": 219.27,
+      "wall_s_all": [
+        219.27,
+        249.55,
+        224.48
+      ],
+      "cpu_s": 218.28,
+      "packets_per_s": 4560,
+      "peak_mem_mb": 228.4,
+      "import_s": 0.46,
+      "kind": "synthetic"
+    },
+    {
+      "file": "ping_gateway.pcapng",
+      "size_mb": 23.4,
+      "packets": 28867,
+      "flows": 321,
+      "alerts": 0,
+      "runs": 3,
+      "wall_s_best": 5.55,
+      "wall_s_all": [
+        5.7,
+        5.76,
+        5.55
+      ],
+      "cpu_s": 5.5,
+      "packets_per_s": 5200,
+      "peak_mem_mb": 58.1,
+      "import_s": 0.58,
+      "kind": "real"
+    },
+    {
+      "file": "web_dns_tracert.pcapng",
+      "size_mb": 36.6,
+      "packets": 58437,
+      "flows": 1063,
+      "alerts": 0,
+      "runs": 3,
+      "wall_s_best": 10.94,
+      "wall_s_all": [
+        11.86,
+        11.29,
+        10.94
+      ],
+      "cpu_s": 10.91,
+      "packets_per_s": 5340,
+      "peak_mem_mb": 59.3,
+      "import_s": 0.45,
+      "kind": "real"
+    },
+    {
+      "file": "scan.pcapng",
+      "size_mb": 0.1,
+      "packets": 660,
+      "flows": 200,
+      "alerts": 1,
+      "runs": 3,
+      "wall_s_best": 0.11,
+      "wall_s_all": [
+        0.33,
+        0.11,
+        0.11
+      ],
+      "cpu_s": 0.11,
+      "packets_per_s": 6269,
+      "peak_mem_mb": 56.6,
+      "import_s": 0.44,
+      "kind": "real"
+    }
+  ]
+}

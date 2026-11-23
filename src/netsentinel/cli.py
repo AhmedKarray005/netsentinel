@@ -118,17 +118,39 @@ def _evaluate(args: argparse.Namespace) -> int:
     except (OSError, ValueError, PcapReadError, ConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    print(f"{'scenario':<34} {'truth':<10} {'detected':<18} {'alerts':>6}  result")
+    print(
+        f"{'scenario':<32} {'truth':<15} {'detected':<15} {'alerts':>6}  "
+        f"{'result':<6} {'predicted':<12} ok?"
+    )
     for row in result["scenarios"]:
         print(
-            f"{row['scenario']:<34} {','.join(row['truth']) or '-':<10} "
-            f"{','.join(row['detected']) or '-':<18} {row['alerts']:>6}  {row['result']}"
-            + (f"  FP={row['FP']}" if row["FP"] else "")
-            + (f"  FN={row['FN']}" if row["FN"] else "")
+            f"{row['scenario']:<32} {','.join(row['truth_rules']) or '-':<15} "
+            f"{','.join(row['detected_rules']) or '-':<15} {row['alerts']:>6}  "
+            f"{row['result']:<6} {row['expected']:<12} {'yes' if row['as_predicted'] else 'NO'}"
+            + (f"  FP={_short(row['FP'])}" if row["FP"] else "")
+            + (f"  FN={_short(row['FN'])}" if row["FN"] else "")
         )
     t = result["totals"]
-    print(f"\nTotals: TP={t.get('TP', 0)}  FP={t.get('FP', 0)}  FN={t.get('FN', 0)}")
+    print(f"\nTotals ((rule, source) pairs): TP={t['TP']}  FP={t['FP']}  FN={t['FN']}")
+    for rule, r in result["by_rule"].items():
+        print(
+            f"  {rule}: TP={r['TP']} FP={r['FP']} FN={r['FN']}  "
+            f"precision={_pct(r['precision'])} recall={_pct(r['recall'])}  |  attacks noticed "
+            f"{r['attacks_noticed']}/{r['attacks_total']}, false-alarm scenarios "
+            f"{r['false_alarm_scenarios']}"
+        )
+    n = len(result["scenarios"])
+    print(f"Behaved as predicted (incl. known limits): {result['as_predicted']}/{n} scenarios")
     return 0
+
+
+def _short(labels: list[str], limit: int = 2) -> str:
+    more = f" +{len(labels) - limit} more" if len(labels) > limit else ""
+    return ", ".join(labels[:limit]) + more
+
+
+def _pct(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.0%}"
 
 
 def _ranking(title: str, items: dict) -> list[str]:

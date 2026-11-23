@@ -24,11 +24,37 @@ def test_evaluation_results(scenario_dir):
         "udp_flood.pcap",
         "bulk_download.pcap",
         "repeated_failed_connections.pcap",
+        "scan_in_background_traffic.pcap",
+        "syn_flood.pcap",
+        "dns_heavy_client.pcap",
+        "service_restart.pcap",
     ]:
         assert by_name[name]["result"] == "PASS", by_name[name]
-    # Documented false negative: a slow scan stays under the 60 s window threshold.
-    assert by_name["slow_port_scan.pcap"]["FN"] == ["NS-001"]
-    assert result["totals"] == {"TP": 4, "FP": 0, "FN": 1}
+    # Known limits, predicted in advance (docs/detection.md):
+    assert by_name["slow_port_scan.pcap"]["FN"] == ["NS-001@192.0.2.66"]
+    assert by_name["horizontal_scan.pcap"]["FN"] == ["NS-001@192.0.2.66"]
+    assert len(by_name["distributed_flood.pcap"]["FN"]) == 20
+    assert by_name["monitoring_checks.pcap"]["FP"] == ["NS-001@192.0.2.30"]
+    assert result["as_predicted"] == 14
+    assert result["totals"] == {"TP": 7, "FP": 1, "FN": 22}
+    assert result["by_rule"]["NS-001"]["attacks_noticed"] == 3
+    assert result["by_rule"]["NS-001"]["attacks_total"] == 5
+    assert result["by_rule"]["NS-003"]["recall"] == 1.0
+
+
+def test_alert_with_wrong_source_is_fp_and_fn(scenario_dir, tmp_path):
+    """Right rule, wrong host blamed: must not count as a hit."""
+    import json
+    import shutil
+
+    shutil.copy(scenario_dir / "port_scan_connect.pcap", tmp_path)
+    manifest = [{"file": "port_scan_connect.pcap", "description": "x",
+                 "truth": [{"rule": "NS-001", "src": "192.0.2.99"}]}]  # fmt: skip
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    row = evaluate(tmp_path)["scenarios"][0]
+    assert row["TP"] == []
+    assert row["FP"] == ["NS-001@192.0.2.66"]
+    assert row["FN"] == ["NS-001@192.0.2.99"]
 
 
 def test_slow_scan_is_caught_with_a_longer_window(scenario_dir, tmp_path):

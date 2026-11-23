@@ -114,4 +114,4 @@ Phases 0-7 are done and Phase 8 (validation) is in final review; see [PROJECT_ST
 
 ## License
 
-To be decided before the repository is made public.
+[MIT](LICENSE)

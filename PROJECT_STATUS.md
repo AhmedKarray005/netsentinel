@@ -19,8 +19,14 @@ Done (uncommitted):
   1M packets 219 s, 228 MB peak; memory follows flows. cProfile: ~81 % of time in Scapy decoding.
   Raw: `docs/results/benchmark_2026-11-23.json`; write-up `docs/results.md`.
 - `docs/demo.md` (5-min demo script), `docs/detection.md` results section rewritten.
-- 99 tests pass locally, ruff clean. Not yet run in CI.
-Left: final README, CV/LinkedIn texts, Ahmed's choices (license, make repo public).
+- Committed by Ahmed: `49de2be` (window fix), `7e1902a` (Phase 8). CI run 45219323457 all green:
+  99 passed on Python 3.13 and on 3.15, frontend OK, Containers + Trivy OK.
+- MIT license (`LICENSE`, `pyproject.toml`). Before going public (2026-11-23) the history was
+  checked: no secrets, captures or databases; one screenshot showed the home IPv6 address
+  (blurred, and removed from every past commit by a history rewrite) and commits used a
+  personal email (rewritten to the GitHub noreply address). **Commit IDs quoted in this file
+  before that date are the old, pre-rewrite IDs.** The original private repo was kept as
+  `netsentinel-dev` (private backup).
 
 ## Phase 1 — Networking lab (done)
 

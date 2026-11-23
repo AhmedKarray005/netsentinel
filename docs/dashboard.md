@@ -29,7 +29,7 @@ Other commands: `npm test` (Vitest), `npm run typecheck`, `npm run build` (stati
 | Page | What it shows | Screenshot |
 |---|---|---|
 | Overview | packets, flows, average/peak rate, alert count; traffic over time; protocol distribution; latest alerts; TCP states; most active hosts; top ports; top conversations; top DNS names | `docs/screenshots/overview_scan_dark.jpg`, `overview_web_light.jpg` |
-| Traffic | flow table with filters (protocol, TCP state, IP, port, time window relative to capture start), sort by start / bytes / packets, pagination | `traffic_flows_by_bytes.jpg` |
+| Traffic | flow table with filters (protocol, TCP state, IP, port, time window relative to capture start), sort by start / bytes / packets, pagination | `traffic_flows_by_bytes.jpg` (client and server addresses blurred) |
 | Alerts | alerts of the selected capture or all captures, filter by severity and rule; each alert opens to its evidence and the thresholds that fired; rule catalogue | `alerts_portscan_evidence.jpg` |
 | Analyze a capture | upload with clear error messages (413 / 415 / 422), list of analyzed captures, select / delete | `upload_captures_light.jpg` |
 

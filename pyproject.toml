@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]  # 77+: SPDX `license = "MIT"`
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,6 +8,7 @@ version = "0.0.1"
 description = "Network traffic analysis and rule-based intrusion detection platform"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
     "scapy>=2.8.0",
     "fastapi>=0.165.0",

@@ -132,7 +132,18 @@ GitHub: private repo https://github.com/AhmedKarray005/netsentinel created 2026-
 `..\..\windows\system32\scan.pcap` was kept whole (display name only, never a disk path, but
 the cleanup did not work in the Docker image either). Fixed with `PureWindowsPath`, test now
 covers `\`, `/` and mixed separators; checked on Linux in `python:3.13-slim`. Security job was
-skipped (needs backend). Next CI run: result to be recorded.
+skipped (needs backend). Second run (45172501044, commit d2b28d8): **all 3 jobs green** in
+2 min 31 s: backend 44 s, frontend 27 s, Containers + Trivy 1 min 42 s (Trivy repo + both images
+with no fixable HIGH/CRITICAL; compose healthy; synthetic scan uploaded through nginx ->
+`"filename":"scan.pcap"`, 414 packets, 200 flows, `alert_count` 1, high).
+Dependabot opened 7 PRs (#1-#7) right after the first push; all were built on 4d67af5 (before
+the filename fix), so their CI failed on that test. After `@dependabot rebase` all 7 passed CI
+and were squash-merged on 2026-11-23: #1 trivy-action (checked: official v0.36.0 tag, signed by
+a maintainer, points to commit ed142fd; my old pin a9c7b0f was the tag object, same code),
+#3 httpx>=0.28.1, #4 ruff>=0.17.6, #5 scapy>=2.8.0, #6 fastapi>=0.165.0, #7 pytest>=9.2.0
+(minimum versions only; CI already installed the newest), #2 API image python:3.13-slim ->
+3.15-slim (image built, Trivy clean, compose smoke test passed). CI backend job now tests on
+3.13 and 3.15 (matrix): result to be checked after the next push.
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 

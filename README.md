@@ -3,7 +3,7 @@
 **Network Traffic Analysis & Intrusion Detection Platform** (personal portfolio project)
 
 > Status: **Phase 7** (PCAP analysis, flows, 3 detection rules, REST API + SQLite,
-> React dashboard, Docker Compose with Trivy-clean images; CI written, not yet run on GitHub).
+> React dashboard, Docker Compose with Trivy-clean images, GitHub Actions CI green).
 
 ![Overview of a real loopback port-scan capture](docs/screenshots/overview_scan_dark.jpg)
 > This README is updated only with features that exist and are tested.
@@ -29,7 +29,7 @@ Detection rules produce **suspicious indicators, not proof of malicious activity
 | React + TypeScript dashboard ([pages, run, screenshots](docs/dashboard.md)) | 6 | done, tested |
 | Structured JSON logs with request IDs ([logging](docs/deployment.md#structured-logs)) | 7 | done, tested |
 | Docker Compose + Trivy scans ([deployment, results](docs/deployment.md)) | 7 | done, tested locally |
-| GitHub Actions CI | 7 | written, not yet run (no repository yet) |
+| GitHub Actions CI: lint, tests, Trivy, compose smoke test ([CI](docs/deployment.md#ci-github-actions-githubworkflowsciyml)) | 7 | done, green on GitHub |
 | Lab scenarios with measured results | 8 | planned |
 
 Architecture: see [docs/architecture.md](docs/architecture.md).

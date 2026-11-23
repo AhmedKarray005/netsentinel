@@ -66,9 +66,13 @@ Read them: `docker compose logs api`, or filter with `jq`, e.g.
 
 | Job | Steps |
 |---|---|
-| backend | `ruff check`, `ruff format --check`, `pytest` (Python 3.13) |
+| backend | `ruff check`, `ruff format --check`, `pytest`, on Python 3.13 (local venv) and 3.15 (Docker image) |
 | frontend | `npm ci`, typecheck, Vitest, production build, `npm audit --omit=dev --audit-level=high` |
 | security (after both) | Trivy on the repository (dependencies, secrets, Dockerfile/compose misconfigurations); build both images; Trivy on each image; `docker compose up --wait`, then a real upload through nginx of a generated synthetic port scan, which must return the NS-001 high alert |
+
+First green run on GitHub: 2026-11-23, 2 min 31 s in total (backend 44 s, frontend 27 s,
+containers + Trivy 1 min 42 s). The run before it failed on a real bug that only shows on
+Linux (upload names with `\` kept their folders), which the Windows test run could not see.
 
 Trivy fails the build on **fixable** HIGH/CRITICAL findings (`ignore-unfixed`: a vulnerability
 with no patched version yet would block every build without anything to do about it).
@@ -81,7 +85,7 @@ commit SHA (tags can be moved; the `trivy-action` tags were hijacked in March 20
 
 - No authentication or TLS: local use only. Exposing it beyond `127.0.0.1` would need both
   (for example TLS on nginx + an auth proxy).
-- Base images use moving tags (`python:3.13-slim`, `node:26-alpine`,
+- Base images use moving tags (`python:3.15-slim`, `node:26-alpine`,
   `nginxinc/nginx-unprivileged:mainline-alpine`); pinning by digest would make builds fully
   reproducible. Both runtime stages also apply OS security updates at build time, so an image
   built today can differ from one built next month: Trivy in CI checks each build.

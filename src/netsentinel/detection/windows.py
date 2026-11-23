@@ -52,7 +52,10 @@ def find_episodes(
         size = len(in_window) if distinct else total
         if size < threshold:
             continue
-        if ranges and left <= ranges[-1][1] + 1:  # overlaps the current episode: extend it
+        # Extend the current episode only if this window shares events with it, or the
+        # previous event's window also passed (a continuous run). Being neighbours in the
+        # list is not enough: two bursts 400 s apart must stay two episodes.
+        if ranges and (left <= ranges[-1][1] or ranges[-1][1] == right - 1):
             ranges[-1][1] = right
             ranges[-1][2] = max(ranges[-1][2], size)
         else:

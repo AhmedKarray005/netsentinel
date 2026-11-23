@@ -36,6 +36,16 @@ def test_window_counts_distinct_values_and_merges_overlaps():
     assert episode.peak == 11  # values at t, t-1 ... t-10 (window edges included)
 
 
+def test_bursts_far_apart_are_separate_episodes():
+    """Two bursts 400 s apart with nothing in between: 2 episodes, not 1 spanning 400 s.
+    (Bug found by the Phase 8 benchmark: neighbours in the list were merged even when far
+    apart in time.)"""
+    burst = [(float(i), i) for i in range(10)]
+    events = burst + [(t + 400.0, v) for t, v in burst]
+    episodes = find_episodes(events, window=10, threshold=5, distinct=True)
+    assert [(e.start, e.end) for e in episodes] == [(0.0, 9.0), (400.0, 409.0)]
+
+
 def test_window_below_threshold_gives_nothing():
     events = [(i * 10.0, i) for i in range(30)]  # spread out: max 2 per 10 s window
     assert find_episodes(events, window=10, threshold=5, distinct=True) == []

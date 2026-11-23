@@ -21,8 +21,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin netsentinel \
     && mkdir /data && chown netsentinel:netsentinel /data
 
+# Debian security updates released after the base image (Trivy found zlib on 2026-11-23).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the wheels, then remove pip: it is not needed at runtime, and its bundled copies of
+# urllib3 / msgpack / setuptools were the remaining Trivy findings.
 COPY --from=build /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels \
+    && pip uninstall -y pip
 COPY config/rules.example.toml /app/config/rules.example.toml
 
 USER netsentinel
@@ -30,7 +37,9 @@ VOLUME ["/data"]
 EXPOSE 8000
 
 # Docker marks the container "unhealthy" if /api/health (which queries the DB) stops answering.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+# Long start period: the first cold start on a busy laptop took 3.5 min (normally ~2 s);
+# failed checks during it do not count, and the first success marks the container healthy.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=180s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4)"]
 
 # 0.0.0.0 inside the container is required so Docker can forward the port; what is reachable

@@ -82,7 +82,32 @@ commit SHA (tags can be moved; the `trivy-action` tags were hijacked in March 20
 - No authentication or TLS: local use only. Exposing it beyond `127.0.0.1` would need both
   (for example TLS on nginx + an auth proxy).
 - Base images use moving tags (`python:3.13-slim`, `node:26-alpine`,
-  `nginxinc/nginx-unprivileged:stable-alpine`); pinning by digest would make builds fully
-  reproducible.
+  `nginxinc/nginx-unprivileged:mainline-alpine`); pinning by digest would make builds fully
+  reproducible. Both runtime stages also apply OS security updates at build time, so an image
+  built today can differ from one built next month: Trivy in CI checks each build.
+- The first start of the API container can be slow on a busy laptop (3.5 min measured once,
+  ~2 s normally), hence the 180 s health-check start period.
+
+## Verified locally on 2026-11-23
+
+Docker Desktop 20.10.22 on Windows 11:
+
+| Check | Result |
+|---|---|
+| `docker compose up --wait` from an empty volume | both containers healthy after 43 s |
+| Synthetic port scan uploaded through nginx | 414 packets, 200 flows, NS-001 high |
+| Real lab capture `scan.pcapng` uploaded through nginx | 201 in 1.4 s, NS-001 high |
+| 60 MB upload | 413 |
+| Write to `/usr` in the API container / to `/data` | refused (read-only) / allowed |
+| `docker compose restart api` | analyses still there (volume) |
+| Dashboard on http://localhost:8080 | all data shown, no console errors (CSP OK) |
+| Trivy 0.76.2, fixable HIGH/CRITICAL: repository / API image / web image | 0 / 0 / 0 |
+
+What Trivy found before the fixes: API image 6 (zlib in Debian; urllib3, msgpack, setuptools
+bundled inside pip) and web image 20 (nginx 1.30.6, musl, zlib, curl, ...). Fixes: OS
+upgrades at build time, pip removed from the runtime image (not needed to run), nginx
+`mainline-alpine` (1.31.7). Trivy 0.76 needs a newer Docker API than 20.10, so the local
+scans used `docker save` tar files (`trivy image --input`); on GitHub's runner it reads
+the images directly.
 - Analysis runs inside the request (a 50 MB capture can take a minute); a job queue would be
   the next step for bigger files.

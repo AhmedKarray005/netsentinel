@@ -33,8 +33,14 @@ class Scenario:
 
 
 # ------------------------------------------------------------------ packet helpers
+# Fixed, locally administered MACs: without them Scapy asks the real network (ARP) for the
+# destination MAC, which needs raw sockets and fails in a locked-down container.
+_MAC_A = "02:00:00:00:00:01"
+_MAC_B = "02:00:00:00:00:02"
+
+
 def _pkt(t: float, src: str, dst: str, layer4: Packet) -> Packet:
-    packet = Ether() / IP(src=src, dst=dst) / layer4
+    packet = Ether(src=_MAC_A, dst=_MAC_B) / IP(src=src, dst=dst) / layer4
     packet.time = t
     return packet
 

@@ -108,8 +108,25 @@ Done:
   trivy-action v0.36.0, Trivy v0.76.2, checked with `git ls-remote` 2026-11-23);
   `.github/dependabot.yml`.
 - Docs: `docs/deployment.md`. Tests: 95 passed (6 new in `tests/test_logging.py`).
-Not verified yet: no image has been built (Docker daemon not running, Docker Desktop 20.10.22
-from 2022, only 1.5 GB free on C:); CI not run (no GitHub repository yet).
+Committed by Ahmed as `9ff76cc` (Phase 6 = `158d851`).
+
+Local container run (2026-11-23, Docker Desktop 20.10.22, uncommitted fixes):
+- Both images built (API 191 MB, web 73 MB). `docker compose up --wait` from an empty volume:
+  healthy after 43 s. Health, SPA routes, security headers OK; synthetic port scan uploaded
+  through nginx -> 414 packets, 200 flows, NS-001 high; real `scan.pcapng` -> 201 in 1.4 s;
+  60 MB upload -> 413; root FS read-only, /data writable; data kept after `restart api`;
+  dashboard in the browser via :8080, no console errors.
+- Fixes found by running it: (1) API health check failed on the first cold start (server
+  ready after 3.5 min on a busy laptop, normally ~2 s) -> start period 180 s; (2) Scapy tried
+  ARP lookups while writing scenarios (no raw sockets in the container) -> fixed MACs in
+  `scenarios.py`; (3) Trivy DS-0002 on web.Dockerfile -> explicit `USER 101`.
+- Trivy 0.76.2 (HIGH/CRITICAL, fixable only): repo 0; API image 6 -> 0 (`apt-get upgrade`
+  for zlib, `pip uninstall pip` removed its bundled urllib3/msgpack/setuptools); web image
+  20 -> 0 (`apk upgrade` + switch to `nginx-unprivileged:mainline-alpine`, nginx 1.31.7;
+  stable-alpine still had 1.30.6 with 6 CVEs). Trivy 0.76 cannot talk to Docker 20.10's API,
+  so images were scanned from `docker save` tar files. Image scan needs > 5 min here -> CI
+  `timeout: 15m`.
+Not verified yet: CI on GitHub (no repository yet).
 
 ## Phase 0 — Planning and environment setup (done 2026-11-20)
 
@@ -177,4 +194,6 @@ from config.
 | 2026-11-22 | dashboard live, 6 captures, 60 API requests after fix | 4 pages OK, 0 errors |
 | 2026-11-23 | `pytest -q` (Phase 7 logging) / ruff | 95 passed / clean |
 | 2026-11-23 | `netsentinel serve` log output | JSON lines, request IDs, 404 logged |
-| 2026-11-23 | `docker compose config --quiet` | valid (images not built: daemon off) |
+| 2026-11-23 | `docker compose config --quiet` | valid |
+| 2026-11-23 | `docker compose up --wait` + CI smoke steps | healthy in 43 s, NS-001 high via nginx |
+| 2026-11-23 | Trivy 0.76.2 repo / API image / web image | 0 / 0 / 0 fixable HIGH+CRITICAL |

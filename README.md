@@ -24,6 +24,7 @@ CI pipeline that lints, tests and scans everything on each push.
 | API | FastAPI + SQLite: upload, analyses, flows, alerts, rules; uploads checked by size, extension and file signature | [api](docs/api.md) |
 | Dashboard | React + TypeScript: overview, traffic/flows, alerts with evidence, upload | [dashboard](docs/dashboard.md) |
 | Operations | Docker Compose (non-root, read-only, no capabilities, localhost only), JSON logs with request IDs, health checks | [deployment](docs/deployment.md) |
+| Cloud | Private Cloud Run service on Google Cloud, created with Terraform (least-privilege service accounts, no public access), deployed by GitHub Actions through Workload Identity Federation (no keys), Cloud Monitoring dashboard + 5xx alert | [GCP deployment](docs/gcp-deployment.md) |
 | CI | GitHub Actions: ruff, 99 pytest tests on Python 3.13 + 3.15, frontend typecheck/tests/build/audit, Trivy on code and both images, end-to-end upload through the containers; Dependabot | [CI](docs/deployment.md#ci-github-actions-githubworkflowsciyml) |
 
 ## Results (measured 2026-11-23)
@@ -68,6 +69,10 @@ Dashboard in development (second terminal, Node.js): `cd frontend`, `npm install
 
 A 5-minute demo walkthrough is in [docs/demo.md](docs/demo.md).
 
+On Google Cloud (private, only allowed Google accounts): see
+[docs/gcp-deployment.md](docs/gcp-deployment.md) for Terraform, the deploy workflow, access
+through `gcloud run services proxy`, cost (free tier) and `terraform destroy`.
+
 ## Architecture
 
 ```mermaid
@@ -92,7 +97,9 @@ import Scapy; everything else works on plain `PacketRecord` objects. More in
 - Metadata only: no payload inspection, nothing inside TLS, no host logs, so no detection of
   brute force against an open service.
 - Rules miss slow, horizontal and distributed attacks (measured above) and fire on monitoring tools.
-- No authentication or TLS: the containers only listen on 127.0.0.1.
+- No authentication or TLS in the app itself: locally the containers only listen on 127.0.0.1;
+  on Cloud Run, Google IAM checks every request before it reaches the app.
+- On Cloud Run the SQLite database is in memory and is lost when the service scales to zero.
 - Detection was not tested on public labelled datasets (e.g. CIC-IDS2017): next step.
 
 ## Safety and scope
@@ -110,7 +117,7 @@ Uvicorn (API), React + Vite (dashboard), pytest, Vitest, ruff (tooling), psutil 
 
 ## Status
 
-Phases 0-7 are done and Phase 8 (validation) is in final review; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for the log.
+Phases 0-8 are done; Phase 9 adds the Google Cloud deployment. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the log.
 
 ## License
 

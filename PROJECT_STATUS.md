@@ -1,6 +1,33 @@
 # Project status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-24
+
+## Phase 9 — Google Cloud deployment (started 2026-11-23)
+Done (details, verification and limits in `docs/gcp-deployment.md`):
+- Own GCP project on a school education billing account (50 $ credit, valid to 2027-01-12), 5 $
+  monthly budget alert (credits excluded, created by Ahmed in the console). gcloud login kept in
+  its own config folder outside AppData, apart from an old school-project account on this PC.
+- Terraform 1.17 (`infra/`), state in a private versioned GCS bucket: APIs, Artifact Registry
+  (keep 3 versions), `netsentinel-run` (no roles) and `netsentinel-deployer` (scoped to one repo
+  and one service), default compute account disabled + Editor removed, Cloud Run v2 (nginx + API
+  in one service, gen2, 0-1 instance, private: `run.invoker` for Ahmed only), Workload Identity
+  Federation for GitHub (this repo + owner ID + main only), Monitoring dashboard + 5xx email alert.
+- `docker/web.Dockerfile`: generates the Cloud Run nginx config (upstream 127.0.0.1:8000);
+  compose unchanged (checked: compose up, upload -> 1 alert).
+- `logging_setup.py`: `severity` field for Cloud Logging (+ test).
+- `.github/workflows/deploy.yml`: after green CI on main (or manual): WIF auth, build, Trivy,
+  push, `gcloud run services update`, smoke test (403 without token, health, upload -> 1 alert).
+  Its build/scan/push/deploy/smoke commands were run by hand (revision 2); actionlint clean.
+- Bugs found: Scapy crash on Cloud Run gen1 (gVisor netlink, `KeyError: 'scope'`) -> gen2;
+  `--quiet` after `--container` rejected by gcloud -> flag order; Terraform default-SA resource
+  found nothing -> explicit fix.
+- First commit by Ahmed: `c2b1457` (Terraform + Cloud Run). The rest is uncommitted.
+
+Open:
+- Ahmed: commit, push, then add the 5 repository variables from `terraform output
+  github_variables`; check the first real `deploy.yml` run.
+- The 5xx alert has not fired yet (no 5xx happened).
+- Education credit expires 2027-01-12: move to another billing account or `terraform destroy`.
 
 ## Current phase: 8 — Validation and portfolio (in progress, started 2026-11-23)
 Done (uncommitted):

@@ -206,6 +206,6 @@ which is free). The state bucket was created by hand: delete it last with
 | `terraform plan` after deploys | no differences |
 | Trivy on `infra/` (misconfig) / on both images | 0 / 0 fixable HIGH-CRITICAL |
 | `actionlint` on the workflows | clean |
+| First real `deploy.yml` run on GitHub (2026-11-24, after green CI) | green in 2 min 21 s: WIF token, Trivy 0, push, revision `netsentinel-00003` with commit-tagged images, smoke test 403 without token / health OK / upload -> 1 alert |
 
-Not verified yet: a full GitHub Actions run of `deploy.yml` (needs the repository variables and
-a push to main), and the 5xx alert actually firing (no 5xx happened).
+Not verified yet: the 5xx alert actually firing (no 5xx happened).

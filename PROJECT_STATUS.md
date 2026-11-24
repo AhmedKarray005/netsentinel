@@ -17,15 +17,14 @@ Done (details, verification and limits in `docs/gcp-deployment.md`):
 - `logging_setup.py`: `severity` field for Cloud Logging (+ test).
 - `.github/workflows/deploy.yml`: after green CI on main (or manual): WIF auth, build, Trivy,
   push, `gcloud run services update`, smoke test (403 without token, health, upload -> 1 alert).
-  Its build/scan/push/deploy/smoke commands were run by hand (revision 2); actionlint clean.
+  First real run 2026-11-24, green on the first try (2 min 21 s): revision
+  `netsentinel-00003`, images tagged with the commit, smoke test 403 / health OK / 1 alert.
 - Bugs found: Scapy crash on Cloud Run gen1 (gVisor netlink, `KeyError: 'scope'`) -> gen2;
   `--quiet` after `--container` rejected by gcloud -> flag order; Terraform default-SA resource
   found nothing -> explicit fix.
-- First commit by Ahmed: `c2b1457` (Terraform + Cloud Run). The rest is uncommitted.
+- Commits by Ahmed: `c2b1457` … `dbad72f`; the 5 repository variables are set.
 
 Open:
-- Ahmed: commit, push, then add the 5 repository variables from `terraform output
-  github_variables`; check the first real `deploy.yml` run.
 - The 5xx alert has not fired yet (no 5xx happened).
 - Education credit expires 2027-01-12: move to another billing account or `terraform destroy`.
 

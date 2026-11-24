@@ -2,3 +2,4 @@
 project_id      = "your-project-id"
 invoker_members = ["user:you@example.com"] # only these Google accounts can open the app
 image_tag       = ""                        # set to a pushed tag (e.g. the git commit) to create Cloud Run
+alert_email     = "you@example.com"          # Cloud Monitoring alert emails (empty = no alert)

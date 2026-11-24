@@ -22,10 +22,11 @@ Done (details, verification and limits in `docs/gcp-deployment.md`):
 - Bugs found: Scapy crash on Cloud Run gen1 (gVisor netlink, `KeyError: 'scope'`) -> gen2;
   `--quiet` after `--container` rejected by gcloud -> flag order; Terraform default-SA resource
   found nothing -> explicit fix.
-- Commits by Ahmed: `c2b1457` … `dbad72f`; the 5 repository variables are set.
+- 5xx alert tested on purpose (2026-11-24): test revision with 0 % traffic returning 502,
+  email received, rolled back, Terraform plan clean.
+- Commits by Ahmed: `c2b1457` … `770ade4`; the 5 repository variables are set.
 
 Open:
-- The 5xx alert has not fired yet (no 5xx happened).
 - Education credit expires 2027-01-12: move to another billing account or `terraform destroy`.
 
 ## Current phase: 8 — Validation and portfolio (in progress, started 2026-11-23)

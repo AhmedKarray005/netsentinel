@@ -208,4 +208,9 @@ which is free). The state bucket was created by hand: delete it last with
 | `actionlint` on the workflows | clean |
 | First real `deploy.yml` run on GitHub (2026-11-24, after green CI) | green in 2 min 21 s: WIF token, Trivy 0, push, revision `netsentinel-00003` with commit-tagged images, smoke test 403 without token / health OK / upload -> 1 alert |
 
-Not verified yet: the 5xx alert actually firing (no 5xx happened).
+| 5xx alert, tested on purpose (2026-11-24) | a tagged test revision with 0 % traffic sent nginx to a wrong API port (`/healthz` 200, `/api/*` 502); 5 requests -> metric recorded within a minute -> incident -> email received. Rolled back with `terraform apply` + `gcloud run services update-traffic --to-latest --remove-tags`; plan clean afterwards |
+
+Lesson from the alert test: a manual `gcloud run services update` ran in the same minute as a
+GitHub deploy, and its `--no-traffic` kept traffic on the previous revision for about 2 minutes.
+The workflow's `concurrency` group only serialises GitHub runs, so manual changes should wait
+until no deploy is running.

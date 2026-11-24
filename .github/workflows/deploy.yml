@@ -1,0 +1,123 @@
+# Deploys to Google Cloud Run (docs/gcp-deployment.md) after CI has passed on main, or by hand.
+# Authenticates with Workload Identity Federation: no service-account key exists anywhere.
+# Needs the repository variables printed by `terraform output github_variables` (infra/).
+name: Deploy to Cloud Run
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # lets this workflow ask GitHub for an OIDC token (exchanged for a 1-hour Google token)
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false # never stop a rollout half-way
+
+env:
+  SERVICE: netsentinel
+
+jobs:
+  deploy:
+    name: Build, scan, push, deploy, smoke test
+    runs-on: ubuntu-latest
+    # Only after a green CI run on main (pushes, not pull requests), or a manual run from main.
+    # Google also refuses tokens from any other ref (condition in infra/wif.tf).
+    if: >-
+      vars.GCP_WIF_PROVIDER != '' && (
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.event == 'push') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # workflow_run: deploy exactly the commit CI tested, not whatever main is now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Image names
+        id: img
+        run: |
+          tag="$(git rev-parse --short=12 HEAD)"
+          echo "api=${{ vars.GCP_ARTIFACT_REGISTRY }}/api:${tag}" >> "$GITHUB_OUTPUT"
+          echo "web=${{ vars.GCP_ARTIFACT_REGISTRY }}/web:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Build images
+        run: |
+          docker build -t "${{ steps.img.outputs.api }}" .
+          docker build -f docker/web.Dockerfile -t "${{ steps.img.outputs.web }}" .
+
+      - name: Trivy - API image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          image-ref: ${{ steps.img.outputs.api }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          timeout: 15m
+
+      - name: Trivy - dashboard image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          image-ref: ${{ steps.img.outputs.web }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-setup-trivy: true
+          timeout: 15m
+
+      - name: Push to Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker push "${{ steps.img.outputs.api }}"
+          docker push "${{ steps.img.outputs.web }}"
+
+      - name: Deploy new revision
+        id: deploy
+        run: |
+          # Service-wide flags first: everything after --container applies to that container.
+          gcloud run services update "$SERVICE" --quiet \
+            --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION }}" \
+            --container web --image "${{ steps.img.outputs.web }}" \
+            --container api --image "${{ steps.img.outputs.api }}"
+          url="$(gcloud run services describe "$SERVICE" --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" --format 'value(status.url)')"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Identity token for the smoke test (the service is private)
+        id: idtoken
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+          token_format: id_token
+          id_token_audience: ${{ steps.deploy.outputs.url }}
+          id_token_include_email: true
+
+      - name: Smoke test - private, healthy, real upload
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          TOKEN: ${{ steps.idtoken.outputs.id_token }}
+        run: |
+          # Without a token Google must refuse the request before it reaches the app.
+          code="$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health")"
+          echo "without token: $code"; test "$code" = "403"
+          curl -fsS -H "Authorization: Bearer $TOKEN" "$URL/api/health"
+          # Synthetic labelled port scan (RFC 5737 addresses) generated by the image just deployed.
+          docker run --rm --entrypoint sh "${{ steps.img.outputs.api }}" -c \
+            'netsentinel make-scenarios /tmp/s >/dev/null && cat /tmp/s/port_scan_connect.pcap' > scan.pcap
+          curl -fsS -H "Authorization: Bearer $TOKEN" -F "file=@scan.pcap" "$URL/api/analyses" | tee result.json
+          grep -q '"alert_count":1' result.json

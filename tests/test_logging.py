@@ -29,6 +29,12 @@ def test_json_formatter_writes_one_object_with_extra_fields():
     assert "\n" not in line
 
 
+def test_json_formatter_sets_cloud_logging_severity():
+    record = logging.makeLogRecord({"name": "t", "levelname": "ERROR", "msg": "boom"})
+    entry = json.loads(JsonFormatter().format(record))
+    assert entry["severity"] == "ERROR"  # Google Cloud Logging reads this field name
+
+
 def test_setup_logging_rejects_bad_values():
     with pytest.raises(ValueError):
         setup_logging(level="LOUD")

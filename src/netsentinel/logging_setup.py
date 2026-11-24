@@ -21,6 +21,9 @@ class JsonFormatter(logging.Formatter):
         entry = {
             "time": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
             "level": record.levelname,
+            # Same value under the name Google Cloud Logging reads, so Cloud Run logs get a real
+            # severity (colours, "errors only" filter, log-based alerts). Other tools ignore it.
+            "severity": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
         }

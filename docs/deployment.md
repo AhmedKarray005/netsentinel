@@ -51,10 +51,11 @@ One JSON object per line on stdout (`netsentinel.logging_setup`). Uvicorn's own 
 through the same formatter. Every HTTP request gets one line with a request ID:
 
 ```json
-{"time": "2026-11-22T23:29:06.204+00:00", "level": "INFO", "logger": "netsentinel.http", "message": "GET /api/analyses/99 404 2.3 ms", "request_id": "3eda64027ec64909", "method": "GET", "path": "/api/analyses/99", "status": 404, "duration_ms": 2.3}
+{"time": "2026-11-22T23:29:06.204+00:00", "level": "INFO", "severity": "INFO", "logger": "netsentinel.http", "message": "GET /api/analyses/99 404 2.3 ms", "request_id": "3eda64027ec64909", "method": "GET", "path": "/api/analyses/99", "status": 404, "duration_ms": 2.3}
 ```
 
-(real line from `netsentinel serve` on 2026-11-22). The ID is returned in the `X-Request-ID`
+(real line from `netsentinel serve` on 2026-11-22; `severity` was added on 2026-11-24 for Google
+Cloud Logging, with the same value as `level`). The ID is returned in the `X-Request-ID`
 response header. Behind nginx, nginx's own `$request_id` is forwarded, so one request can be
 followed through both logs. Incoming IDs are only kept if they match `[A-Za-z0-9._-]{1,64}`,
 so a client cannot inject fake log lines. Captures are never logged, only their SHA-256 prefix.
@@ -80,6 +81,10 @@ with no patched version yet would block every build without anything to do about
 Supply chain: the workflow has read-only permissions, and every action is pinned to a full
 commit SHA (tags can be moved; the `trivy-action` tags were hijacked in March 2026). Dependabot
 (`.github/dependabot.yml`) proposes weekly updates for pip, npm, base images and actions.
+
+## Google Cloud
+
+The same images also run as a private Cloud Run service: [gcp-deployment.md](gcp-deployment.md).
 
 ## Not done / limits
 
